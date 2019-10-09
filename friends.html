@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Your Friends</title>
+    <link rel="stylesheet" href="friends.css">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+      #top_bar {
+        position: sticky;
+        top:0;
+        background-color: #4d4d4d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="side-bar">
+      <ul>
+        <li id="friends">friends</li>
+        <li id="friend_requests">friend requests</li>
+        <li id="add_friend">add friend</li>
+        <li id="blocked">blocked</li>
+      </ul>
+    </div>
+
+    <div class="content">
+
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      $(function(){
+        var socket = io();
+
+        function addFriendRequest(id){
+          socket.emit("addFriendRequest", id);
+        }
+
+        $("#friends").click(function(e){
+          e.preventDefault();
+
+          socket.emit("getRelationList", [true, false, false]);
+        });
+
+        $("#friend_requests").click(function(e){
+          e.preventDefault();
+
+          socket.emit("getRelationList", [false, false, true]);
+        });
+
+        $("#add_friend").click(function(e){
+          $(".content").html("<form><p>username or id</p><input name='user_id' id='userIn'></form><div id='results'></div>");
+          $("#userIn").keyup(function(e){
+            socket.emit("get_friendable_users", $("#userIn").val());
+          });
+        });
+
+        socket.on("friendable_users", function(friends){
+          var output = "<ul>";
+
+          for (var key in friends){
+            output += "<li>" + friends[key] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;'><a id='userId=" + key + "'>Add Friend</a></span></li>";
+          }
+
+          output += "</ul>";
+
+          $("#results").html(output);
+
+          $("#results a").click(function(){
+            id = $(this).attr("id");
+            user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+            socket.emit("addFriendRequest", user_id);
+
+            $(this).parent().parent().remove();
+          })
+        });
+
+
+
+        $("#blocked").click(function(e){
+          e.preventDefault();
+
+          socket.emit("getRelationList", [false, true, false]);
+        });
+
+        socket.on("emitRelationList", function(input){ //input: [(boolean)[friend, blocked, requested], {user_id: [username, requestor_id(if requested friend)]}, user_id]
+          var request = input[0]; //(boolean)[friend, blocked, requested]
+          var dictionary = input[1]; //{user_id: [username, requestor_id (if is being requested to be a friend)]}
+
+
+          if (Object.keys(dictionary).length == 0){
+            $(".content").html("<ul><li>No Users Found</li></ul>");
+            return;
+          }
+
+
+          if (request[2] == true){
+            $('.content').html(formatRequests(dictionary));
+
+            /*
+              makes the accept button function
+             */
+            $(".otherRequest").find(".accept").click(function(){
+              var id = $(this).parent().attr("id");
+              var user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+              $(this).parent().parent().remove();
+
+              socket.emit("acceptFriend", user_id);
+            });
+
+            /*
+              makes the decline button function
+             */
+            $(".otherRequest").find(".decline").click(function(){
+              var id = $(this).parent().attr("id");
+              var user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+              $(this).parent().parent().remove();
+
+              socket.emit("declineFriend", user_id);
+            });
+
+            $(".myRequest").find(".decline").click(function(){
+              var id = $(this).parent().attr("id");
+              var user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+              $(this).parent().parent().remove();
+
+              socket.emit("cancelFriend", user_id);
+            });
+            return;
+          }
+
+          var ret = "<ul>";
+          for (var key in dictionary){
+            if (request[2] == true){
+              ret += "<li>" + dictionary[key][0] + "</li>";
+            } else {
+              ret += "<li>" + dictionary[key][0] + "</li>";
+            }
+          }
+          ret += "</ul>";
+          $(".content").html(ret);
+        });
+
+        socket.on('login_alert', function(){
+          $(".content").html("<p id='login'><a align='center' onclick='redirect()'>Please Login</a></p>");
+        });
+      });
+
+      function redirect(){
+        window.location.pathname = '/loginScreen';
+      }
+
+      function formatRequests(dictionary){
+        var res = "<ul>";
+        for (var key in dictionary){
+          var req_id = dictionary[key][1];
+
+          if (req_id == null)
+            continue;
+
+          if (req_id == key) {
+            res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='otherRequest' id='userId=" + key + "'><a class='accept'>Accept</a><a class='decline'>Decline</a></span></li>"
+          } else {
+            res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='myRequest' id='userId=" + key + "'><a class='decline'>Cancel</a></span></li>"
+          }
+        }
+        res += "</ul>";
+        return res;
+      }
+    </script>
+  </body>
+</html>

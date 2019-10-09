@@ -1,0 +1,26 @@
+{
+  "name": "textprogram",
+  "version": "1.0.0",
+  "description": "A basic chatting program",
+  "main": "index.js",
+  "dependencies": {
+    "bcrypt": "^3.0.6",
+    "bluebird": "^3.5.5",
+    "body-parser": "^1.19.0",
+    "colors": "^1.3.3",
+    "cookie-parser": "^1.4.4",
+    "express": "^4.17.1",
+    "mysql": "^2.17.1",
+    "nodemon": "^1.19.1",
+    "promise": "^8.0.3",
+    "sanitize": "^2.1.0",
+    "sanitize-html": "^1.20.1",
+    "socket.io": "^2.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Coleman Sandefur",
+  "license": "ISC"
+}

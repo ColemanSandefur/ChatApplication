@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Chatting Application</title>
+    <style>
+      body {margin:0; font-family: helvetica, arial; background-color: #5d5d5d;}
+      * {margin: 0; padding: 0; font-family: helvetica, arial;}
+
+      /*
+       *
+       *Changing recieved messages
+       *
+       */
+      /* Old color: #f7f7f7 */
+      #messages {width:100%; }
+      li {background-color: #3d3d3d;padding:5px 5px; margin:5px 10px; color: black; border-style: solid; border-color:black; border-radius: 5px; color: white; }
+      .user {}
+      .message {padding:0 5px; word-wrap: break-word; overflow-wrap: break-word; }
+      table {table-layout: fixed;}
+
+      /*
+       *
+       *Changing the bottom bar
+       *
+       */
+      form.textBar { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; overflow:hidden; height:6%; vertical-align: middle}
+      form * {vertical-align:middle}
+      form textarea{border: 0; padding: 0 .25%; width: 89%; margin-right: .5%; resize:none; height:80%; display:inline-block; border-radius: 5px; margin-top: .3%;}
+      form button { width: 9%; background: #ef4b4b; border: none; padding: 10px; display:inline-block; color: white; border-radius: 5px; height: 80%; margin-top: .3%}
+
+    </style>
+    <link rel="stylesheet" href="css/messages.css">
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form id="dummy" style="padding:.7% ; width: 85%; height: 9%; visibility: hidden;">
+      <textarea></textarea><button>Sendish</button>
+    </form>
+    <form action="" class="textBar">
+      <textarea id="textIn" autocomplete="off"></textarea><button>Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+
+    <script>
+      $(function () {
+        var socket = io();
+        $('form').submit(function(e){
+          e.preventDefault(); // prevents page reloading
+
+          socket.emit('chat message', $('#textIn').val());
+          $('#textIn').val('');
+
+          return false;
+        });
+        socket.on('chat message', function(msg){
+          $('#messages').append($('<li>').html(msg));
+          window.scrollTo(0,document.body.scrollHeight);
+        });
+      });
+    </script>
+  </body>
+</html>

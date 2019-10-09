@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Your Messages</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="personal.css">
+  </head>
+  <body>
+
+
+    <div id="top_bar">
+      <div class="toolbar">
+        <a onclick="goFriends()"><span class="centerHelper"></span><span class="center">friends</span></a>
+      </div>
+      <div id="recent_messages">
+      </div>
+      <div id="settings">
+        <a id="addUser"><span class="centerHelper"></span><span class="center">Add User</span></a>
+        <a id="getUsers"><span class="centerHelper"></span><span class="center">Get Users</span></a>
+      </div>
+    </div>
+
+
+    <div id="content">
+    </div>
+
+    <div class="dim-background" id='popup'>
+
+    </div>
+
+    <div class="displayId">
+
+    </div>
+    <form action="" class="textBar">
+      <textarea id="textIn" type="submit" autocomplete="off"></textarea><button>Send</button>
+    </form>
+
+
+
+    <!--
+      End of visible content
+    -->
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      var active = -1;
+
+      function hideUserPrompt(){
+        // $(".form-hide").css("visibility", "hidden");
+        $("#popup").css("visibility", "hidden");
+        $("#popup").html("");
+        // $(".textBar").css("visibility", "visible");
+      }
+
+      $(function () {
+        var socket = io();
+        $("#addUserForm").submit(function(e){
+          e.preventDefault();
+          // $(this).append("<input name='chatId' value='" + active + "'>");
+          // alert($("#chooseUser").val());
+          socket.emit("addUserToChat", [$("#chooseUser").val(), active]);
+        });
+
+        socket.on("addedUserToChat", function(){
+          hideUserPrompt();
+        });
+
+        socket.emit("waiting-personal");
+        $("#textIn").keypress(function(key){
+          if (key.which==13 && !key.shiftKey){
+            $(this).closest("form").submit();
+            key.preventDefault();
+            return false;
+          }
+        });
+
+        $(".textBar").submit(function(e){
+          e.preventDefault(); //Stop page reloading;
+          if ($('#textIn').val().trim().length == 0){
+            $("#textIn").val("");
+            return;
+          }
+          var send = [active, $('#textIn').val()];
+          socket.emit('chatMessage', send);
+          $('#textIn').val("");
+        });
+
+        socket.on("personal-response", function(available){
+          $("#recent_messages").html("");
+          // adds the chats that the user has access to, to the list
+          for (var available_property in available){
+            $("#recent_messages").append($("<a id='chat=" + available_property + "'><span class='centerHelper'></span><span class='center'>" + available[available_property] + "</span></a>").click(function(e){
+              e.preventDefault();
+              id = $(this).attr("id");
+              chat_id = id.substring(id.indexOf("chat=") + "chat=".length);
+              active = chat_id;
+              socket.emit("get_chat", chat_id);
+              $(this).parent().children().removeClass("selected");
+              $(this).removeClass("alert");
+              $(this).addClass("selected");
+              $("#settings").css("visibility", "visible");
+            }));
+          }
+
+
+          // places the 'add chat' button the end of the list
+          $("#recent_messages").append($("<a id='addChat'><span class='centerHelper'></span><span class='center'>Add Chat</center></a>").click(function(e){
+            e.preventDefault();
+            $('#popup').css('visibility', 'visible');
+            $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addChatForm\"><h1>Create a Chat</h1><p>chat name: <input id=\"chat_name\" name=\"chat_name\"></p><p>chat description: <input id=\"chat_desc\" name=\"chat_desc\"></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Create Chat</button></form></div>");
+
+
+            $("#addChatForm").submit(function(e){
+              e.preventDefault();
+
+              socket.emit("createChat", [$("#chat_name").val(), $("#chat_desc").val()]);
+
+              $("#popup").html("<div class=\"form\"><div class=\"form-container\"><p>Creating Chat</p></div></div>")
+            })
+            // window.location.pathname = '/addChat';
+          }));
+
+          // for (var i = 0; i < 100; i++){
+          //   $("#recent_messages").append($("<a><span class='centerHelper'></span><span class='center'>Hi</center></a>"));
+          // }
+        });
+
+        socket.on("createdChat", function(){
+          socket.emit("waiting-personal");
+          hideUserPrompt();
+        });
+
+        socket.on("give_user_id", function(user_id){ // displays the user_id mostly for testing purposes
+          $(".displayId").html("<p>user_id: " + user_id + "</p>");
+        });
+
+        socket.on('response', function(res){// gives the client the messages of the active chat
+          $('#content').html("");
+
+
+          var out = "<ul id=\"message_list\">";
+          for (var i = res.length - 1; i > -1; i--){
+            out += formatChat(res[i].username, res[i].message);
+          }
+          out += "</ul>";
+
+          $('#content').html(out);
+          $(".textBar").css('visibility', 'visible');
+          window.scrollTo(0,document.body.scrollHeight); //scroll user to the bottom of the page
+        });
+
+        socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
+          //Logic for updating chat; if current chat = the chat that needs updating it appends the message to the chat
+          //Else it alerts the user about the chat having a new message by putting a yellow border around the chat that got updated (alert class)
+
+          if (active == input[0]){
+            addMessage(formatChat(input[1][0], input[1][1]));
+          } else {
+            $("#chat\\=" + input[0]).addClass("alert");
+          }
+        });
+
+        socket.on('login_alert', function(){
+          $("#content").html("<p id='login'><a align='center' onclick='redirect()'>Please Login</a></p>");
+        });
+
+        function addMessage(message){
+          var height = document.documentElement,
+              body = document.body,
+              scrollTop = 'scrollTop',
+              scrollHeight = 'scrollHeight';
+
+          // percent is the percent scrolled down the page.
+          var percent = (height[scrollTop]||body[scrollTop]) / ((height[scrollHeight]||body[scrollHeight]) - height.clientHeight) * 100;
+
+          $('#message_list').append(message);
+
+          if (percent >= 99){
+            window.scrollTo(0,document.body.scrollHeight);
+          }
+        }
+
+        $("a#addUser").click(function (){ //Add a user to the chat
+          // $('.form-hide').css('visibility','visible');
+          // $('.textBar').css('visibility', 'hidden');
+
+          socket.emit("getAvailableUsersForChat", chat_id); //requests the users that can be added to the chat
+        });
+
+        $("a#getUsers").click(function() { //Get the users in the chat
+          socket.emit("getUsersInChat", chat_id);
+
+        })
+
+        socket.on("giveUsersInChat", function(input){
+          var out = "<ul>";
+
+          for (var key in input){
+            out += "<li>" + input[key] + "</li>";
+          }
+
+          out += "</ul>";
+
+          $("#popup").css("visibility", "visible");
+          $("#popup").html("<div class=\"form\"><div class=\"form-container\" style=\"background-color: #5f5f5f;\"><div class=\"user_list\">" + out + "</div><button onclick=\"hideUserPrompt()\">close</button></div></div>");
+        });
+
+        socket.on("giveAvaliableUsersForChat", function(user_dict){ //Gives the client what users they can add to the chat
+          $('#popup').css('visibility', 'visible');
+          $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addUserForm\"><h1>Add user to current chat</h1><p>user_id: <select name=\"userId\" id=\"chooseUser\"></select></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">add user</button></form></div>");
+
+
+          var result = "";
+
+          if (Object.keys(user_dict).length == 0){
+            $("#chooseUser").html("<option value=\"-1\">You Have No Friends</option>");
+            return;
+          }
+
+          for (var key in user_dict){
+            result += "<option value=\"" + key + "\">" + user_dict[key] + "</option>";
+          }
+
+          $("#addUserForm").submit(function(e){
+            e.preventDefault();
+
+            console.log($("#chooseUser").val());
+
+            socket.emit("addUserToChat", [$("#chooseUser").val(), active]);
+
+            hideUserPrompt();
+          });
+          $("#chooseUser").html(result);
+        });
+
+        function formatChat(username, message){ //puts the username, and the message into the right format for displaying to the user
+          return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + message + "</td></table></li>";
+        }
+      });
+
+      function redirect(){ // redirect user to the login screen
+        window.location.pathname = '/loginScreen';
+      }
+      function goFriends(){ // redirects user to the friends page
+        window.location.pathname = '/friends';
+      }
+
+
+
+    </script>
+  </body>
+</html>
