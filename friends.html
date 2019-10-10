@@ -14,6 +14,12 @@
     </style>
   </head>
   <body>
+    <div id="top_bar">
+      <div class="toolbar">
+        <a onclick="goHome()"><span class="centerHelper"></span><span class="center">home</span></a>
+        <a onclick="goPersonal()"><span class="centerHelper"></span><span class="center">personal</span></a>
+      </div>
+    </div>
     <div class="side-bar">
       <ul>
         <li id="friends">friends</li>
@@ -50,7 +56,10 @@
         });
 
         $("#add_friend").click(function(e){
-          $(".content").html("<form><p>username or id</p><input name='user_id' id='userIn'></form><div id='results'></div>");
+          $(".content").html("<form id='findUserForm'><p>username or id</p><input name='user_id' id='userIn'></form><div id='results'></div>");
+          $("#findUserForm").submit(function(e){
+            e.preventDefault();
+          })
           $("#userIn").keyup(function(e){
             socket.emit("get_friendable_users", $("#userIn").val());
           });
@@ -153,6 +162,14 @@
 
       function redirect(){
         window.location.pathname = '/loginScreen';
+      }
+
+      function goHome(){
+        window.location.pathname = "/";
+      }
+
+      function goPersonal(){
+        window.location.pathname = "/personal";
       }
 
       function formatRequests(dictionary){

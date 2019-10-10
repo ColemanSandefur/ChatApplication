@@ -2,9 +2,94 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <title></title>
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+      * {
+        font-family: 'Open Sans', sans-serif;
+      }
+      body {
+        background-color: #5f5f5f;
+        font-family: 'Open Sans', sans-serif;
+      }
+      div {
+        text-align: center;
+      }
+      input {
+        text-align: left;
+        background-color: #4b4b4b;
+        border-style: solid;
+        border-color: #5f5f5f;
+        color: white;
+      }
+      button {
+        background-color: #4b4b4b;
+        border-style: none;
+        color: white;
+      }
+      form {
+        background-color: #4B4B4B;
+        color:white;
+        width: 20rem;
+        height: 10rem;
+        padding: 5px;
+        margin: auto;
+      }
+      div {
+        position:fixed;
+        left: 50%;
+        top: 50%;
+        margin-left: -10rem;
+        margin-top: -5rem;
+      }
+      form p {
+        margin: 8px;
+      }
+
+      table{
+        margin: 5px auto;
+      }
+
+      a{
+        cursor:pointer;
+      }
+    </style>
   </head>
   <body>
-    <p>alert</p>
+    <div style="">
+    </div>
+    <div>
+      <form action="/loginScreen" method="post" style="vertical-align:middle">
+        <table style='align: center'>
+          <tr>
+            <td>
+              <p>Username:</p>
+            </td>
+            <td>
+              <input id="user" autocomplete="off" name="user">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p>Password:</p>
+            </td>
+            <td>
+              <input id="pass" autocomplete="off" name="pass" type="password">
+            </td>
+          </tr>
+        </table>
+
+        <button type="submit" value="Submit">Login</button>
+        <p style="background-color: red; color: white; border-radius: 3px; margin: 2px;">Wrong username or password</p>
+        <a onclick='document.location.pathname="/createAccount"'>Create an Account</a>
+      </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      function createAccount(){
+        document.location.pathname="/createAccount";
+      }
+    </script>
   </body>
 </html>

@@ -11,6 +11,7 @@
 
     <div id="top_bar">
       <div class="toolbar">
+        <a onclick="goHome()"><span class="centerHelper"></span><span class="center">home</span></a>
         <a onclick="goFriends()"><span class="centerHelper"></span><span class="center">friends</span></a>
       </div>
       <div id="recent_messages">
@@ -75,6 +76,13 @@
             return false;
           }
         });
+
+        $("#textIn").on("change paste keyup", function(e){
+          if ($("#textIn").val().length > 1000){
+            $("#textIn").val($("#textIn").val().substring(0, 1000));
+            alert("you've reached the character cap in one message!");
+          }
+        })
 
         $(".textBar").submit(function(e){
           e.preventDefault(); //Stop page reloading;
@@ -245,6 +253,9 @@
       }
       function goFriends(){ // redirects user to the friends page
         window.location.pathname = '/friends';
+      }
+      function goHome(){
+        window.location.pathname = "/";
       }
 
 

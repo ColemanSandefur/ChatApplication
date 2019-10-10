@@ -63,7 +63,6 @@ app.get('/test', function(req, res){
 });
 
 app.get('/createAccount', function(req, res){
-  myDb.createUser("steve", "pass", "Steve@randomMail.com");
   res.sendFile(__dirname + "/createAccount.html");
 });
 
@@ -346,12 +345,18 @@ io.on('connection', function(socket){
   socket.on("chatMessage", function(input){ //user makes a request to add a message if they do, it updates users currently viewing the chat
 
     // input = [chat_id, message]
-
-
-    input[1] = cleanse(input[1]);
+    if (input[1].length > 1000){
+      return;
+    }
 
     if (input[1].trim().length == 0){
       return;
+    }
+
+    input[1] = cleanse(input[1]);
+
+    if (input[1].length > 8192){
+      input[1] = input[1].substring(0, 8192);
     }
 
     myDb.getIdFromCookie(socket.id).then(function(user_id){
