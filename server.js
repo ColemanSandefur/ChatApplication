@@ -53,15 +53,6 @@ app.get('/personal', function(req, res){
   res.sendFile(__dirname + "/personal.html");
 });
 
-app.get('/addChat', function(req, res){
-  res.sendFile(__dirname + "/addChat.html");
-});
-
-app.get('/test', function(req, res){
-  myDb.addMessage(1, 3, "hi");
-  // myDb.yeet(1);
-});
-
 app.get('/createAccount', function(req, res){
   res.sendFile(__dirname + "/createAccount.html");
 });
@@ -104,32 +95,6 @@ app.post('/loginScreen', function(req, res){
     } else {
       res.redirect("/loginScreen");
     }
-  });
-});
-
-app.post('/addChat', function(req,res){
-  var chatName = req.body.chatName;
-  var chatDescription = req.body.chatDescription;
-  myDb.createChat(chatName, chatDescription).then(function(chat_id){
-    myDb.getIdFromCookie(req.cookies.userId).then(function(user_id){
-      myDb.addUserToChat(user_id, chat_id);
-    });
-  });
-
-
-
-  res.redirect('/personal');
-});
-
-app.post("/addUserChat", function(req, res){
-  myDb.isUserInChat(req.body.userId, req.body.chatId).then(function(isInChat){
-    if (isInChat) return;
-
-    myDb.getSpecificUserRelation(user_id, req.body.userId, true, false, false).then(function(isFriend){
-      if (!isFriend) return;
-
-      myDb.addUserToChat(req.body.userId, req.body.chatId);
-    });
   });
 });
 
