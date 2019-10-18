@@ -33,7 +33,9 @@
     <div class="displayId">
 
     </div>
+
     <form action="" class="textBar">
+      <a style="position: absolute; right: 11%; height:80%;" id="addPictureButton"><span class="centerHelper"></span><span class="center" style="background-color: gray; padding:3px; border-radius:5px;">Add Picture</span></a>
       <textarea id="textIn" type="submit" autocomplete="off"></textarea><button>Send</button>
     </form>
 
@@ -44,9 +46,16 @@
     -->
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/siofu/client.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       var active = -1;
+
+      function addPicturePompt(){
+        alert('hi');
+      }
+
+
 
       function hideUserPrompt(){
         // $(".form-hide").css("visibility", "hidden");
@@ -57,6 +66,22 @@
 
       $(function () {
         var socket = io();
+        var siofu = new SocketIOFileUpload(socket);
+
+        $("#addPictureButton").click(function(){
+          $("#popup").css("visibility", "visible");
+          $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addImageForm\"><h1>Add a Picture</h1><p>Image: <input id=\"images\" name=\"chat_name\" type=\"file\"></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Post Pictures</button></form></div>");
+
+
+          $("#addImageForm").submit(function(e){
+            e.preventDefault();
+            var files = $("#images").prop("files");
+
+            siofu.submitFiles(files);
+
+            hideUserPrompt();
+          });
+        });
         $("#addUserForm").submit(function(e){
           e.preventDefault();
           // $(this).append("<input name='chatId' value='" + active + "'>");

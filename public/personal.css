@@ -258,5 +258,6 @@ span.centerHelper {
 
 form.textBar { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; overflow:hidden; height: 3rem; vertical-align: middle; visibility: hidden;}
 form.textBar * {vertical-align:middle}
-form.textBar textarea{border: 0; padding: 0 .25%; width: 89%; margin-right: .5%; resize:none; height:80%; display:inline-block; border-radius: 5px; margin-top: .3%;}
+form.textBar textarea {border: 0; padding: 0 .25%; width: 89%; margin-right: .5%; resize:none; height:80%; display:inline; border-radius: 5px; margin-top: .3%; z-index: 0;}
+form.textBar div {border:0; padding: 0 .25%; width : 89%; margin-right: .5%; height: 80%; margin-top: .3%; display: inline;}
 form.textBar button { width: 9%; background: #ef4b4b; border: none; padding: 10px; display:inline-block; color: white; border-radius: 5px; height: 80%; margin-top: .3%; cursor: pointer;}

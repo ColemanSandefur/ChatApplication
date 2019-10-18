@@ -10,6 +10,9 @@ var cookieParser = require('cookie-parser');
 var sanitizeHTML = require('sanitize-html');
 var colors = require('colors');
 var path = require("path");
+var formidable = require("formidable");
+var fs = require("fs");
+var SocketIOFileUpload = require("socketio-file-upload");
 
 /*
  * External Files
@@ -22,6 +25,7 @@ app.use(cookieParser());
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static(path.join(__dirname, "static")));
+app.use(SocketIOFileUpload.router);
 
 var userDict = {};
 
@@ -61,6 +65,9 @@ app.get('/friends', function(req, res){
   res.sendFile(__dirname + "/friends.html");
 });
 
+app.get("/uploadImage", function(req, res){
+  res.sendFile(__dirname + "/uploadImage.html");
+})
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////  POST  ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,6 +161,14 @@ io.on('connection', function(socket){
    *
    *
    */
+
+  var uploader = new SocketIOFileUpload();
+  uploader.dir = __dirname + "/images";
+  uploader.listen(socket);
+
+  // uploader.on("saved", function(event){
+  //   console.log(event.file);
+  // });
 
   socket.on('waiting-personal', function(){ // user asking for available chats
     myDb.getIdFromCookie(socket.id).then(function(user_id){
