@@ -169,6 +169,36 @@ module.exports = {
     });
   },
 
+  addImage: function(user_id, chat_id, image_name, image_location){
+    return new Promise(function(resolve, reject){
+      dbQuery("INSERT INTO messages (user_id, chat_id, message, has_image) VALUES (?, ?, ?, ?)", [user_id, chat_id, "", 1]).then(function(result){
+        var message_id = result["insertId"];
+
+        dbQuery("INSERT INTO image_handler (message_id) VALUES (?)", [message_id]).then(function(result){
+          var image_id = result["insertId"];
+          dbQuery("INSERT INTO images (image_id, image_filepath, image_name) VALUES (?, ?, ?)", [image_id, image_location, image_name]).then(function(result){
+            resolve();
+          }).catch(function(err){});
+        }).catch(function(err){});
+      }).catch(function(err){});
+    }).catch(function(err){});
+  },
+
+  getImage: function(message_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT * FROM image_handler WHERE (message_id = ?)", [message_id]).then(function(result){
+        var imageIds = [];
+        for (var i = 0; i < result.length; i++){
+          imageIds.push(result[i].image_id);
+        }
+
+        getImageHelper(imageIds).then(function(result){
+          resolve(result);
+        });
+      })
+    });
+  },
+
   hasChatAccess: function(chat_id, user_id){
     return new Promise(function(resolve, reject){
       dbQuery("SELECT * FROM chat_users WHERE chat_id=? AND user_id=?", [chat_id, user_id]).then(function(result){
@@ -333,8 +363,6 @@ module.exports = {
 
         for (var i = 0; i < result.length; i++){
 
-          console.log("user_id1: " + result[i].user_id1 + ", user_id2: " + result[i].user_id2 + ", friend: " + friend + ", blocked: " + blocked + ", pending: " + pending);
-
           if (!smaller){
             friends[result[i].user_id2] = ["", result[i].requestor_id];
           } else {
@@ -398,13 +426,7 @@ module.exports = {
     return new Promise(function(resolve, result){
       var user_big = Math.max(user_id1, user_id2);
       var user_small = Math.min(user_id1, user_id2);
-
-      console.log(user_id1 + ", " + user_id2);
-
-      console.log("SELECT * from user_relation WHERE user_id1=? AND user_id2=? AND friend=? AND blocked=? AND pending=? [" + user_small + ", " + user_big + ", " + friend + ", " + blocked + ", " + pending + "]");
-
       dbQuery("SELECT * from user_relation WHERE user_id1=? AND user_id2=? AND friend=? AND blocked=? AND pending=?", [user_small, user_big, friend, blocked, pending]).then(function(result){
-        console.log(result);
         resolve(result.length > 0);
       });
     });
@@ -479,10 +501,6 @@ module.exports = {
 
         dbQuery(query).then(function(result){
 
-          for (var i = 0; i < result.length; i++){
-            console.log(result[i].user_id1 + ", " + result[i].user_id2);
-          }
-
           delete users[user_id];
 
           if (result.length == 0){
@@ -492,8 +510,6 @@ module.exports = {
           var smaller = result[0].user_id1 < user_id;
 
           for (var i = 0; i < result.length; i++){
-
-            console.log("user_id1: " + result[i].user_id1 + ", user_id2: " + result[i].user_id2 + ", smaller: " + smaller);
 
             if (!smaller){
               delete users[result[i].user_id2]
@@ -505,7 +521,6 @@ module.exports = {
                 delete users[result[i].user_id1];
               }
             }
-            // console.log(result[i].user_id1 + ", " + result[i].user_id2);
           }
 
           resolve(users);
@@ -528,8 +543,6 @@ module.exports = {
 
         for (var i = 0; i < result.length; i++){
 
-          console.log("user_id1:" + result[i].user_id1 + ", user_id2: " + result[i].user_id2 + ", smaller: " + smaller);
-
           if (!smaller){
             friends[result[i].user_id2] = "";
           } else {
@@ -542,18 +555,12 @@ module.exports = {
           }
         }
 
-        console.log("friends:");
-        console.log(friends);
-
         dbQuery("SELECT * FROM chat_users WHERE chat_id=?", [chat_id]).then(function(result){
           for (var i = 0; i < result.length; i++){
-            console.log("user_id: " + result[i].user_id);
             if (friends.hasOwnProperty("" + result[i].user_id)){
               delete friends["" + result[i].user_id];
             }
           }
-
-          console.log(friends);
           resolve(friends);
         });
 
@@ -644,7 +651,6 @@ function getChatId(user_id){
 
 function sendMessage(sender, chat_id, message){ //sender first
   return new Promise(function (resolve, reject){
-    // console.log(new Date().toISOString());
     dbQuery("UPDATE message_handler SET last_message=? WHERE chat_id=?", [(new Date().toISOString().slice(0, 19).replace('T', ' ')), chat_id]);
 
     dbQuery("INSERT INTO messages (send_id, chat_id, message) VALUES (?, ?, ?)", [sender, chat_id, message]).then(function(result){
@@ -692,4 +698,25 @@ function getUsersFromNameFunction(part_username){
     }
 
   })
+}
+
+function getImageHelper(imageIds){ //returns a promise of a image_id: path pair
+  return new Promise(function(resolve, reject){
+    var total = 0;
+    var img_paths = {}; //image_id: path
+    for (var i = 0; i < imageIds.length; i++){
+      dbQuery("SELECT * FROM images WHERE (image_id = ?)", [imageIds[i]]).then(function(result){
+        if (result.length == 0){
+          resolve(null);
+          return;
+        }
+        result = result[0];
+        img_paths[result.image_id] = result.image_filepath;
+        total ++;
+        if (total >= imageIds.length){
+          resolve(img_paths);
+        }
+      });
+    }
+  });
 }

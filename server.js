@@ -12,7 +12,8 @@ var colors = require('colors');
 var path = require("path");
 var formidable = require("formidable");
 var fs = require("fs");
-var SocketIOFileUpload = require("socketio-file-upload");
+var sha256 = require("js-sha256");
+var saveFile = require("save-file");
 
 /*
  * External Files
@@ -67,6 +68,7 @@ app.get('/friends', function(req, res){
 
 app.get("/uploadImage", function(req, res){
   res.sendFile(__dirname + "/uploadImage.html");
+  myDb.addImage(0, 1, "yes.gif", "images");
 })
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////  POST  ///////////////////////////////////////////////////////////////////////////////////////
@@ -146,6 +148,8 @@ io.on('connection', function(socket){
     socket.id = userId;
   }
 
+  var chatId = 0;
+
   // Notify user connected
   console.log("user connected, id:".green + socket.id + "");
 
@@ -162,13 +166,52 @@ io.on('connection', function(socket){
    *
    */
 
-  var uploader = new SocketIOFileUpload();
-  uploader.dir = __dirname + "/images";
-  uploader.listen(socket);
 
-  // uploader.on("saved", function(event){
-  //   console.log(event.file);
-  // });
+  socket.on("file-upload", function(data){ //data: [chat_id, [fileName, fileData]]
+    var chat_id = data[0];
+
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      myDb.hasChatAccess(chat_id, user_id).then(function(hasAccess){
+        if (!hasAccess){
+          return;
+        }
+        var datArray = data[1];
+
+        for (var i = 0; i < datArray.length; i++){
+          var fileName = datArray[i][0];
+          var fileData = datArray[i][1];
+          var sha = sha256(fileData);
+
+          var ext = path.extname(fileName);
+          var newName = "images/" + chat_id + "/" + sha + ext;
+
+          saveFileHelper(fileData, newName, fileName).then(function(data){// oldFileName, fileName, buffer
+            var fileName = data[0];
+            var newName = data[1];
+            var buffer = data[2];
+            console.log("saving");
+            myDb.updateCookie(user_id);
+            myDb.addImage(user_id, chat_id, fileName, newName);
+
+
+            //give the images to clients that already have the page loaded
+            cacheIt(user_id).then(function(){
+              var sockets = io.sockets.sockets;
+              for(var socketId in sockets)
+              {
+                var cur_socket = sockets[socketId]; //loop through and do whatever with each connected socket
+
+                // cur_socket.emit('update_chat', input[0]);
+                //...
+                updateUser(chat_id, cur_socket, [userDict[user_id], ""], buffer);
+              }
+            });
+
+          });
+        }
+      });
+    });
+  });
 
   socket.on('waiting-personal', function(){ // user asking for available chats
     myDb.getIdFromCookie(socket.id).then(function(user_id){
@@ -249,13 +292,9 @@ io.on('connection', function(socket){
     var chat_id = input[1];
     myDb.getIdFromCookie(socket.id).then(function(user_id){
       myDb.isUserInChat(user_id2, chat_id).then(function(isInChat){
-        console.log("isInChat: " + isInChat);
         if (isInChat) return;
 
-        console.log("user_id: " + user_id + ", user_id2: " + user_id2);
-
         myDb.getSpecificUserRelation(user_id, user_id2, true, false, false).then(function(isFriend){
-          console.log("isFriend: " + isFriend);
           if (!isFriend) return;
 
           myDb.addUserToChat(user_id2, chat_id).then(function(){
@@ -312,7 +351,14 @@ io.on('connection', function(socket){
           if (result) {
             myDb.getMessages(chat_id, 50).then(function(result){
               cacheMessageArray(result).then(function(userArray){
+                // var newArray = [];
+                // for (var i = 0; i < 100; i++){
+                //   newArray.push(userArray[0]);
+                // }
+                // socket.emit('response', newArray);
+
                 socket.emit('response', userArray);
+                chatId = chat_id;
               });
             });
           }
@@ -539,7 +585,18 @@ function updateUser(chat_id, cur_socket, message){ //Update the given user's cha
     if (user_id == null) return;
     myDb.hasChatAccess(chat_id, user_id).then(function(result){
       if (result == true){
-        cur_socket.emit("update_chat", [chat_id, message]);
+        cur_socket.emit("update_chat", [chat_id, message, null]);
+      }
+    });
+  });
+}
+
+function updateUser(chat_id, cur_socket, message, imageBuffer){ //Update the given user's chat
+  myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
+    if (user_id == null) return;
+    myDb.hasChatAccess(chat_id, user_id).then(function(result){
+      if (result == true){
+        cur_socket.emit("update_chat", [chat_id, message, {imageBuffer}]);
       }
     });
   });
@@ -586,21 +643,37 @@ function cacheMessageArray(array){
       resolve(array);
       return;
     }
+
+    var x = 0;
     for (var i = 0; i < array.length; i++){
 
       cacheMessageArrayHelper(i, array[i].user_id).then(function(out){
         array[out[0]].username = userDict[out[1]];
+        if (array[out[0]].has_image == 1){
+          getFile(array[out[0]].message_id).then(function(data){
 
-        num++;
-        if (num == array.length){
-          resolve(array);
+            array[out[0]].imageData = data; //{image_id: imageData}
+            num++;
+            if (num == array.length){
+              resolve(array);
+              return;
+            }
+          });
+        } else {
+          num++;
+          if (num == array.length){
+            resolve(array);
+            return;
+          }
         }
+
+
       });
     }
   });
 }
 
-function cacheMessageArrayHelper(index, user_id){
+function cacheMessageArrayHelper(index, user_id){ //caches the username and then returns the index that was given and the user_id that was just cached
 
   return new Promise(function(resolve, reject){
     cacheIt(user_id).then(function(){
@@ -628,4 +701,44 @@ function cacheNameArray(array){ //array is userid: username
       });
     }
   });
+}
+
+function getFile(message_id){
+  return new Promise(function(resolve, reject){
+    myDb.getImage(message_id).then(function(data){// data: {image_id: image_filepath}
+      var tot = 0;
+      var buffers = {}; //buffers: {image_id: ArrayBuffer}
+      for (var image_id in data){
+        try {
+          getFileHelper(data[image_id], image_id).then(function(newData){
+            buffers[newData[0]] = newData[1];
+            tot++;
+            if (tot == Object.keys(data).length){
+              resolve(buffers)
+            }
+          })
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    });
+  });
+}
+
+function getFileHelper(filePath, imageId){
+  return new Promise(function(resolve, reject){
+    fs.readFile(filePath, (err,data) => {
+      if (err) throw err;
+
+      resolve([imageId, data]);
+    });
+  });
+}
+
+function saveFileHelper(fileData, fileName, oldFileName){
+  return new Promise(function(resolve, reject){
+    saveFile(fileData, fileName).then(function(buffer){
+      resolve([oldFileName, fileName, buffer]);
+    })
+  })
 }

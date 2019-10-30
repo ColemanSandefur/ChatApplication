@@ -64,21 +64,39 @@
         // $(".textBar").css("visibility", "visible");
       }
 
+      function arrayToBase64( buffer ){
+        var binary = '';
+        var bytes = new Uint8Array( buffer );
+        var len = bytes.byteLength;
+        for (var i = 0; i < len; i++) {
+            binary += String.fromCharCode( bytes[ i ] );
+        }
+        return window.btoa( binary );
+      }
+
       $(function () {
         var socket = io();
-        var siofu = new SocketIOFileUpload(socket);
 
         $("#addPictureButton").click(function(){
           $("#popup").css("visibility", "visible");
-          $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addImageForm\"><h1>Add a Picture</h1><p>Image: <input id=\"images\" name=\"chat_name\" type=\"file\"></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Post Pictures</button></form></div>");
+          $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addImageForm\"><h1>Add a Picture</h1><p>Image: <input id=\"images\" name=\"chat_name\" type=\"file\" multiple></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Post Pictures</button></form></div>");
 
 
           $("#addImageForm").submit(function(e){
             e.preventDefault();
             var files = $("#images").prop("files");
+            console.log(files);
 
-            siofu.submitFiles(files);
+            var fileData = [];
+            var len = Object.keys(files).length;
+            for (var i = 0; i < len; i++){
+              fileData.push([files[i].name, files[i]]);
+            }
+            var data = [active, fileData];
 
+            console.log(data);
+
+            socket.emit("file-upload", data);
             hideUserPrompt();
           });
         });
@@ -175,7 +193,8 @@
 
           var out = "<ul id=\"message_list\">";
           for (var i = res.length - 1; i > -1; i--){
-            out += formatChat(res[i].username, res[i].message);
+            // console.log(res[i].imageData);
+            out += formatChat(res[i].username, res[i].message, res[i].imageData);
           }
           out += "</ul>";
 
@@ -187,9 +206,14 @@
         socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
           //Logic for updating chat; if current chat = the chat that needs updating it appends the message to the chat
           //Else it alerts the user about the chat having a new message by putting a yellow border around the chat that got updated (alert class)
-
+          console.log(input[2]);
           if (active == input[0]){
-            addMessage(formatChat(input[1][0], input[1][1]));
+            if (input[2] != null){
+              addMessage(formatChat(input[1][0], input[1][1], input[2]));
+              console.log(input[2]);
+            } else {
+              addMessage(formatChat(input[1][0], input[1][1], {}));
+            }
           } else {
             $("#chat\\=" + input[0]).addClass("alert");
           }
@@ -268,8 +292,19 @@
           $("#chooseUser").html(result);
         });
 
-        function formatChat(username, message){ //puts the username, and the message into the right format for displaying to the user
-          return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + message + "</td></table></li>";
+        function formatChat(username, message, imageData){ //puts the username, and the message into the right format for displaying to the user
+          var img = "";
+          for (var data in imageData){
+            var blob = new Blob([imageData[data]], {type: "image"});
+            var urlCreator = window.URL || window.webkitURL;
+            var imageURL = urlCreator.createObjectURL( blob );
+            img += "<img style=\"height: 10em;\" src=\"" + imageURL + "\" \\>";
+            // console.log(data);
+            // var imgData = arrayToBase64(imageData[data]);
+            // console.log("<img id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>");
+            // img += "<img style=\"height: 10em;\" id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>";
+          }
+          return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
       });
 

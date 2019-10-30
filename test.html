@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <form class="" action="" method="post">
+      <input type="file" name="files" id="files" value="" multiple>
+      <button type="submit" name="button"></button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      $(function(){
+        var socket = io();
+
+        $("form").submit(function(e){
+          e.preventDefault();
+
+          var FReader = new FileReader();
+          // var Name = document.getElementById('NameBox').value;
+          document.getElementById('UploadArea').innerHTML = Content;
+          FReader.onload = function(evnt){
+              socket.emit('Upload-Test', { 'Name' : 'Name', Data : evnt.target.result });
+          }
+          socket.emit('Start-Test', { 'Name' : 'Name', 'Size' : SelectedFile.size });
+        });
+      })
+    </script>
+  </body>
+</html>
