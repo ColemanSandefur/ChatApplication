@@ -26,7 +26,6 @@ app.use(cookieParser());
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.static(path.join(__dirname, "static")));
-app.use(SocketIOFileUpload.router);
 
 var userDict = {};
 
@@ -89,7 +88,7 @@ app.post('/loginScreen', function(req, res){
     return;
   }
 
-  // res.send("hi");
+
   myDb.loginDB(username, password).then(function(resolve, reject){
     if (reject){
       throw reject;
@@ -99,7 +98,6 @@ app.post('/loginScreen', function(req, res){
       userId = randomLetters(64);
       res.cookie('userId', userId);
       myDb.addCookie(username, userId);
-      // res.send("hi");
       res.redirect("/personal");
     } else {
       res.redirect("/loginScreen");
@@ -349,7 +347,7 @@ io.on('connection', function(socket){
           return;
         myDb.hasChatAccess(chat_id, result).then(function(result){//returns true if the user has access to the certain chat
           if (result) {
-            myDb.getMessages(chat_id, 50).then(function(result){
+            myDb.getMessages(chat_id, 20).then(function(result){
               cacheMessageArray(result).then(function(userArray){
                 // var newArray = [];
                 // for (var i = 0; i < 100; i++){

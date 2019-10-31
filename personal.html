@@ -46,7 +46,6 @@
     -->
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/siofu/client.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       var active = -1;
@@ -152,6 +151,7 @@
               $(this).removeClass("alert");
               $(this).addClass("selected");
               $("#settings").css("visibility", "visible");
+              console.log('requested message');
             }));
           }
 
@@ -160,7 +160,7 @@
           $("#recent_messages").append($("<a id='addChat'><span class='centerHelper'></span><span class='center'>Add Chat</center></a>").click(function(e){
             e.preventDefault();
             $('#popup').css('visibility', 'visible');
-            $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addChatForm\"><h1>Create a Chat</h1><p>chat name: <input id=\"chat_name\" name=\"chat_name\"></p><p>chat description: <input id=\"chat_desc\" name=\"chat_desc\"></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Create Chat</button></form></div>");
+            $("#popup").html("<div class=\"form\"><form action=\"\" method=\"post\" class=\"form-container\" style=\"text-align:center;\" id=\"addChatForm\"><h1>Create a Chat</h1><p>chat name: <input id=\"chat_name\" name=\"chat_name\" style=\"width: 10em\"></p><p>chat description: <input id=\"chat_desc\" style=\"width: 10em\" name=\"chat_desc\"></p><button name=\"cancel\" onclick=\"hideUserPrompt()\" type=\"button\">cancel</button><button type=\"submit\" name=\"submit\">Create Chat</button></form></div>");
 
 
             $("#addChatForm").submit(function(e){
@@ -187,6 +187,8 @@
           $(".displayId").html("<p>user_id: " + user_id + "</p>");
         });
 
+        var imageDataArray = {};
+
         socket.on('response', function(res){// gives the client the messages of the active chat
           $('#content').html("");
 
@@ -199,8 +201,10 @@
           out += "</ul>";
 
           $('#content').html(out);
+
           $(".textBar").css('visibility', 'visible');
           window.scrollTo(0,document.body.scrollHeight); //scroll user to the bottom of the page
+          addImages(imageDataArray);
         });
 
         socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
@@ -295,16 +299,27 @@
         function formatChat(username, message, imageData){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
           for (var data in imageData){
-            var blob = new Blob([imageData[data]], {type: "image"});
-            var urlCreator = window.URL || window.webkitURL;
-            var imageURL = urlCreator.createObjectURL( blob );
-            img += "<img style=\"height: 10em;\" src=\"" + imageURL + "\" \\>";
+            img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
+            imageDataArray[data] = imageData[data];
             // console.log(data);
             // var imgData = arrayToBase64(imageData[data]);
             // console.log("<img id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>");
             // img += "<img style=\"height: 10em;\" id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>";
           }
           return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
+        }
+
+        async function addImages(imageDataArray){
+          await new Promise(resolve => setTimeout(resolve, 0));
+          for (var imageId in imageDataArray){
+            var imageData = imageDataArray[imageId];
+
+            var blob = new Blob([imageData], {type: "image"});
+            var urlCreator = window.URL || window.webkitURL;
+            var imageURL = urlCreator.createObjectURL( blob );
+
+            $("#imageId\\=" + imageId).attr("src", imageURL);
+          }
         }
       });
 
