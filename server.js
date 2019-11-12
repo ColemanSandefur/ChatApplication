@@ -178,20 +178,15 @@ io.on('connection', function(socket){
   });
 
   socket.on("get-chat-test", function(){
-    console.log("getChatTest");
     var stream = ss.createStream();
-    console.log("yes");
     myDb.getMessages(17, 20).then(function(result){
-      console.log("maybe");
       cacheMessageArray(result).then(function(userArray){
-        console.log("so");
 
         ss(socket).emit('give-chat-test', stream);
         stream.push("hi");
         for (var i = 0; i < 100; i++){
           stream.push("hi");
         }
-        console.log("streaming");
       });
     });
   });
@@ -257,9 +252,10 @@ io.on('connection', function(socket){
           socket.emit("personal-response", "");
           socket.emit("give_user_id", user_id);
         }
+        myDb.getChatInfo(chats[0]);
         for (var i = 0; i < chats.length; i++){
           available_chats[chats[i]] = null;
-          myDb.getChatName(chats[i]).then(function(result){ //result is an array of [chat_name, chat_id]
+          myDb.getChatInfo(chats[i]).then(function(result){ //result is an array of [chat_name, chat_id]
             available_chats[result[1]] = result[0];
             track++;
             if (track == chats.length) {
@@ -447,7 +443,6 @@ io.on('connection', function(socket){
             return;
           }
           myDb.updateCookie(user_id);
-          console.log(user_id + " " + input[0] + " " + input[1]);
           myDb.addMessage(user_id, input[0], input[1]).then(function(result){
             var sockets = io.sockets.sockets;
             for(var socketId in sockets)
@@ -702,12 +697,10 @@ function cacheMessageArray(array){
       cacheMessageArrayHelper(i, array[i].user_id).then(function(out){
         array[out[0]].username = userDict[out[1]];
         if (array[out[0]].has_image == 1){
-          console.log("message-id: " + array[out[0]].message_id);
           getFile(array[out[0]].message_id).then(function(data){
 
             array[out[0]].imageData = data; //{image_id: imageData}
             num++;
-            console.log("message-id2: " + array[out[0]].message_id);
             if (num == array.length){
               resolve(array);
               return;

@@ -142,7 +142,8 @@
           $("#recent_messages").html("");
           // adds the chats that the user has access to, to the list
           for (var available_property in available){
-            $("#recent_messages").append($("<a id='chat=" + available_property + "'><span class='centerHelper'></span><span class='center'>" + available[available_property] + "</span></a>").click(function(e){
+            var chat_button = $("<a id='chat=" + available_property + "'><span class='centerHelper'></span><span class='center chatButtons' style=\"title: 'hi'\">" + available[available_property].name + "</span></a>");
+            chat_button.click(function(e){
               e.preventDefault();
               id = $(this).attr("id");
               chat_id = id.substring(id.indexOf("chat=") + "chat=".length);
@@ -152,8 +153,11 @@
               $(this).removeClass("alert");
               $(this).addClass("selected");
               $("#settings").css("visibility", "visible");
-              console.log('requested message');
-            }));
+            });
+
+            chat_button.children(".chatButtons").prop("title", available[available_property].description);
+
+            $("#recent_messages").append(chat_button);
           }
 
 

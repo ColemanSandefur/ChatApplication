@@ -257,7 +257,20 @@ module.exports = {
   getChatName: function(chat_id){
     return new Promise(function(resolve, reject){
       dbQuery("SELECT name FROM chat_handler WHERE chat_id=?", [chat_id]).then(function(result){
-        resolve([result[0].name, chat_id]);
+        resolve([result[0], chat_id]);
+      });
+    });
+  },
+
+  getChatInfo: function(chat_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT name, description FROM chat_handler WHERE chat_id=?", [chat_id]).then(function(result){
+        console.log(result[0]);
+        if (result.length == 0){
+          resolve();
+          return;
+        }
+        resolve([result[0], chat_id]);
       });
     });
   },
