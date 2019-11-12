@@ -5,6 +5,7 @@ var app = express();
 
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
+var ss = require("socket.io-stream");
 var promise = require("bluebird");
 var cookieParser = require('cookie-parser');
 var sanitizeHTML = require('sanitize-html');
@@ -66,8 +67,12 @@ app.get('/friends', function(req, res){
 });
 
 app.get("/uploadImage", function(req, res){
-  res.sendFile(__dirname + "/uploadImage.html");
-  myDb.addImage(0, 1, "yes.gif", "images");
+  res.sendFile(__dirname + "/uploadImage.html");;
+})
+
+app.get("/unassignedImages", function(req,res){
+  res.send("hi");
+  myDb.clearRandomImages();
 })
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////  POST  ///////////////////////////////////////////////////////////////////////////////////////
@@ -114,7 +119,7 @@ app.post("/createAccount", function(req, res){
 
   if (req.body.password.trim() != req.body.confirmPass.trim())
     res.redirect("/createAccount");
-  myDb.createUser(username, pass, req.body.email.trim()).then(function(){
+    myDb.createUser(username, pass, req.body.email.trim()).then(function(){
     res.redirect("/personal");
   });
 });
@@ -163,6 +168,33 @@ io.on('connection', function(socket){
    *
    *
    */
+
+  ss(socket).on("test-upload", function(stream, data){
+    var filename = "images/" + data[1].name;
+
+    var readStream = stream.pipe(fs.createReadStream(filename));
+
+    console.log(readStream);
+  });
+
+  socket.on("get-chat-test", function(){
+    console.log("getChatTest");
+    var stream = ss.createStream();
+    console.log("yes");
+    myDb.getMessages(17, 20).then(function(result){
+      console.log("maybe");
+      cacheMessageArray(result).then(function(userArray){
+        console.log("so");
+
+        ss(socket).emit('give-chat-test', stream);
+        stream.push("hi");
+        for (var i = 0; i < 100; i++){
+          stream.push("hi");
+        }
+        console.log("streaming");
+      });
+    });
+  });
 
 
   socket.on("file-upload", function(data){ //data: [chat_id, [fileName, fileData]]
@@ -366,6 +398,27 @@ io.on('connection', function(socket){
   });
 
 
+
+  socket.on("get_more_messages", function(array){
+    var chat_id = array[0]
+    var message_id = array[1];
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      myDb.hasChatAccess(user_id).then(function(access){
+        if (access){
+          return;
+        }
+
+        myDb.getMessagesRange(chat_id, message_id, 20).then(function(result){
+          cacheMessageArray(result).then(function(userArray){
+            socket.emit('more_message_response', userArray);
+            chatId = chat_id;
+          });
+        });
+      })
+    })
+  })
+
+
   socket.on("chatMessage", function(input){ //user makes a request to add a message if they do, it updates users currently viewing the chat
 
     // input = [chat_id, message]
@@ -394,6 +447,7 @@ io.on('connection', function(socket){
             return;
           }
           myDb.updateCookie(user_id);
+          console.log(user_id + " " + input[0] + " " + input[1]);
           myDb.addMessage(user_id, input[0], input[1]).then(function(result){
             var sockets = io.sockets.sockets;
             for(var socketId in sockets)
@@ -648,10 +702,12 @@ function cacheMessageArray(array){
       cacheMessageArrayHelper(i, array[i].user_id).then(function(out){
         array[out[0]].username = userDict[out[1]];
         if (array[out[0]].has_image == 1){
+          console.log("message-id: " + array[out[0]].message_id);
           getFile(array[out[0]].message_id).then(function(data){
 
             array[out[0]].imageData = data; //{image_id: imageData}
             num++;
+            console.log("message-id2: " + array[out[0]].message_id);
             if (num == array.length){
               resolve(array);
               return;
@@ -726,7 +782,7 @@ function getFile(message_id){
 function getFileHelper(filePath, imageId){
   return new Promise(function(resolve, reject){
     fs.readFile(filePath, (err,data) => {
-      if (err) throw err;
+      // if (err) throw err;
 
       resolve([imageId, data]);
     });

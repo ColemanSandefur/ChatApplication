@@ -49,6 +49,7 @@
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       var active = -1;
+      var oldestMessage = -1;
 
       function addPicturePompt(){
         alert('hi');
@@ -192,20 +193,45 @@
         socket.on('response', function(res){// gives the client the messages of the active chat
           $('#content').html("");
 
-
+          $("#content").html($("<button style='cursor: pointer;'>Load More</button>").click(function(e){
+            e.preventDefault();
+            socket.emit("get_more_messages", [active, oldestMessage]);
+          }));
           var out = "<ul id=\"message_list\">";
+          oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
             // console.log(res[i].imageData);
+
             out += formatChat(res[i].username, res[i].message, res[i].imageData);
           }
           out += "</ul>";
 
-          $('#content').html(out);
+          $('#content').append($(out));
 
           $(".textBar").css('visibility', 'visible');
           window.scrollTo(0,document.body.scrollHeight); //scroll user to the bottom of the page
           addImages(imageDataArray);
         });
+
+        socket.on("more_message_response", function(res){
+          $("#content button").remove();
+
+
+          var out = "<ul id=\"message_list\">";
+          oldestMessage = res[res.length-1].message_id;
+          for (var i = res.length - 1; i > -1; i--){
+            // console.log(res[i].imageData);
+            out += formatChat(res[i].username, res[i].message, res[i].imageData);
+          }
+          out += "</ul>";
+          $("#content").prepend($(out));
+
+
+          $("#content").prepend($("<button style='cursor: pointer;'>Load More</button>").click(function(e){
+            e.preventDefault();
+            socket.emit("get_more_messages", [active, oldestMessage]);
+          }));
+        })
 
         socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
           //Logic for updating chat; if current chat = the chat that needs updating it appends the message to the chat
@@ -301,10 +327,6 @@
           for (var data in imageData){
             img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
             imageDataArray[data] = imageData[data];
-            // console.log(data);
-            // var imgData = arrayToBase64(imageData[data]);
-            // console.log("<img id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>");
-            // img += "<img style=\"height: 10em;\" id=\"imageId=" + data + "\" src=\"data:image;base64, " + imgData + "\" \>";
           }
           return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }

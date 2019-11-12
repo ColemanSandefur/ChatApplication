@@ -169,6 +169,17 @@ module.exports = {
     });
   },
 
+  getMessagesRange: function(chat_id, last_message_id, ammount){
+    return new Promise(function (resolve, reject){
+
+      con.query("SELECT * FROM messages WHERE chat_id=? AND message_id<? ORDER BY message_id DESC LIMIT ?", [chat_id, last_message_id, ammount], function (err, result){
+        if (err) reject(err);
+
+        else resolve(result);
+      });
+    });
+  },
+
   addImage: function(user_id, chat_id, image_name, image_location){
     return new Promise(function(resolve, reject){
       dbQuery("INSERT INTO messages (user_id, chat_id, message, has_image) VALUES (?, ?, ?, ?)", [user_id, chat_id, "", 1]).then(function(result){
@@ -591,6 +602,51 @@ module.exports = {
   test: function(){
     dbQuery("SELECT * FROM users WHERE user_id=?", [1]).then(function(result){
       console.log("result: " + result[0].user_id);
+    })
+  },
+
+  clearRandomImages: function(){
+    console.log("yes");
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT * FROM messages WHERE has_image=?", [1]).then(function(result){
+        console.log("no");
+        if (result.length == 0){
+          resolve();
+          return;
+        }
+
+        console.log("maybe");
+
+        var complete = 0;
+
+        function removeMessages(message_id) {
+          console.log("hello world!");
+          dbQuery("SELECT * FROM image_handler WHERE message_id=?", [message_id]).then(function(result){
+            if (result.length == 0){
+              dbQuery("DELETE FROM messages WHERE message_id=?", [message_id]).then(function(){
+                complete++;
+
+                if (complete == result.length){
+                  resolve();
+                }
+              });
+            } else {
+              complete++;
+
+              if (complete == result.length){
+                resolve();
+              }
+            }
+          });
+        }
+
+
+        for (var i = 0; i < result.length; i++){
+          var message_id = result[i].message_id;
+          removeMessages(message_id);
+        }
+
+      })
     })
   }
 

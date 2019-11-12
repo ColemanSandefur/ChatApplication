@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <body>
+    <form id="fileForm" class="" action="" method="post">
+      <input type="file" id="files" multiple \>
+      <button type="submit">submit</button>
+    </form>
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/socket.io-stream.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      $(function(){
+        var socket = io();
+
+        $("#fileForm").submit(function(e){
+          e.preventDefault();
+
+          var stream = ss.createStream();
+          var file = $("#files").prop("files")[0];
+
+          ss(socket).emit("test-upload", stream, [1, {size: file.size, name: file.name}]);
+          var blobStream = ss.createBlobReadStream(file);
+          var size = 0;
+
+          blobStream.on('data', function(chunk) {
+            size += chunk.length;
+            console.log(Math.floor(size / file.size * 100) + '%');
+            // -> e.g. '42%'
+          });
+
+          blobStream.pipe(stream);
+        });
+
+        socket.emit("get-chat-test");
+
+        ss(socket).on("give-chat-test", function(stream){
+          console.log("getting stream");
+          var binaryString = "";
+          var x = null;
+          stream.on("data", (chunk) => {
+            console.log(chunk);
+          });
+        })
+      });
+
+    </script>
+  </body>
+</html>
