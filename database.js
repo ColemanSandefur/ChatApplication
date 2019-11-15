@@ -188,7 +188,7 @@ module.exports = {
         dbQuery("INSERT INTO image_handler (message_id) VALUES (?)", [message_id]).then(function(result){
           var image_id = result["insertId"];
           dbQuery("INSERT INTO images (image_id, image_filepath, image_name) VALUES (?, ?, ?)", [image_id, image_location, image_name]).then(function(result){
-            resolve();
+            resolve([message_id, image_id]);
           }).catch(function(err){});
         }).catch(function(err){});
       }).catch(function(err){});

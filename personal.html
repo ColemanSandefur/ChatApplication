@@ -46,6 +46,7 @@
     -->
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/socket.io-stream.js"></script>
     <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
     <script>
       var active = -1;
@@ -85,18 +86,19 @@
           $("#addImageForm").submit(function(e){
             e.preventDefault();
             var files = $("#images").prop("files");
-            console.log(files);
 
             var fileData = [];
             var len = Object.keys(files).length;
             for (var i = 0; i < len; i++){
-              fileData.push([files[i].name, files[i]]);
+              fileData.push([files[i], files[i].name]);
             }
             var data = [active, fileData];
 
-            console.log(data);
+            var stream = ss.createStream({objectMode: true});
 
-            socket.emit("file-upload", data);
+            ss(socket).emit("stream-upload", stream);
+
+            stream.write(data);
             hideUserPrompt();
           });
         });
@@ -204,9 +206,8 @@
           var out = "<ul id=\"message_list\">";
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
-            // console.log(res[i].imageData);
 
-            out += formatChat(res[i].username, res[i].message, res[i].imageData);
+            out += formatChat(res[i].username, res[i].message, res[i].imageData, res[i].message_id);
           }
           out += "</ul>";
 
@@ -222,14 +223,15 @@
 
 
           var out = "<ul id=\"message_list\">";
+          var oldMessage = oldestMessage;
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
-            // console.log(res[i].imageData);
-            out += formatChat(res[i].username, res[i].message, res[i].imageData);
+            out += formatChat(res[i].username, res[i].message, res[i].imageData, res[i].message_id);
           }
           out += "</ul>";
           $("#content").prepend($(out));
 
+          $("#message_id\\=" + oldMessage).scrollTop();
 
           $("#content").prepend($("<button style='cursor: pointer;'>Load More</button>").click(function(e){
             e.preventDefault();
@@ -240,11 +242,11 @@
         socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
           //Logic for updating chat; if current chat = the chat that needs updating it appends the message to the chat
           //Else it alerts the user about the chat having a new message by putting a yellow border around the chat that got updated (alert class)
-          console.log(input[2]);
+
           if (active == input[0]){
             if (input[2] != null){
-              addMessage(formatChat(input[1][0], input[1][1], input[2]));
-              console.log(input[2]);
+              addMessage(formatChat(input[1][0], input[1][1], input[2].imageBuffer));
+              addImages(input[2].imageBuffer);
             } else {
               addMessage(formatChat(input[1][0], input[1][1], {}));
             }
@@ -317,8 +319,6 @@
           $("#addUserForm").submit(function(e){
             e.preventDefault();
 
-            console.log($("#chooseUser").val());
-
             socket.emit("addUserToChat", [$("#chooseUser").val(), active]);
 
             hideUserPrompt();
@@ -332,10 +332,20 @@
             img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
             imageDataArray[data] = imageData[data];
           }
-          return "<li><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
+          return "<li id='message_id=-1'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
+        }
+
+        function formatChat(username, message, imageData, message_id){ //puts the username, and the message into the right format for displaying to the user
+          var img = "";
+          for (var data in imageData){
+            img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
+            imageDataArray[data] = imageData[data];
+          }
+          return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
 
         async function addImages(imageDataArray){
+          console.log(imageDataArray);
           await new Promise(resolve => setTimeout(resolve, 0));
           for (var imageId in imageDataArray){
             var imageData = imageDataArray[imageId];

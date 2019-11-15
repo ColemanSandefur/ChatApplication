@@ -169,28 +169,91 @@ io.on('connection', function(socket){
    *
    */
 
-  ss(socket).on("test-upload", function(stream, data){
-    var filename = "images/" + data[1].name;
 
-    var readStream = stream.pipe(fs.createReadStream(filename));
-
-    console.log(readStream);
-  });
 
   socket.on("get-chat-test", function(){
-    var stream = ss.createStream();
+    var stream = ss.createStream({highWaterMark: 1024, objectMode: true});
     myDb.getMessages(17, 20).then(function(result){
-      cacheMessageArray(result).then(function(userArray){
-
-        ss(socket).emit('give-chat-test', stream);
-        stream.push("hi");
-        for (var i = 0; i < 100; i++){
-          stream.push("hi");
-        }
+      // cacheMessageArray(result).then(function(userArray){
+      //   ss(socket).emit('give-chat-test', stream);
+      //   console.log(userArray);
+      //
+      //   var start = Date.now();
+      //
+      //
+      //   var buf = Buffer.from(JSON.stringify(userArray));
+      //   console.log(Date.now() - start);
+      //   console.log(buf);
+      //   stream.write(buf);
+      //
+      //
+      //
+      // });
+      // testGetFile("C:\\Users\\colem\\Pictures\\Camera Roll\\WIN_20191010_16_04_53_Pro.mp4").then(function(result){
+      //   ss(socket).emit("give-chat-test", stream);
+      //
+      //   stream.write(result);
+      //   console.log(result[0].length);
+      // })
+      getFile(255).then(function(result){
+        ss(socket).emit("give-chat-test", stream);
+        stream.write(result);
       });
     });
   });
 
+  ss(socket).on("stream-upload", function(stream){
+    stream.on("data", (data) => {
+      var chat_id = data[0];
+      var fileArray = data[1];
+
+
+      myDb.getIdFromCookie(socket.id).then(function(user_id){
+        myDb.hasChatAccess(chat_id, user_id).then(function(hasAccess){
+          // if (!hasAccess){
+          //   return;
+          // }
+
+          for (var i = 0; i < fileArray.length; i++){
+            //Get data from fileArra
+            var fileName = fileArray[i][1];
+            var fileData = fileArray[i][0];
+
+            //create the new name (sha256)
+            var sha = sha256(fileData);//sha256 of file
+            var ext = path.extname(fileName);//file extension
+            var newName = "images/" + chat_id + "/" + sha + ext;
+
+            saveFileHelper(fileData, newName, fileName).then(function(data){
+              var fileName = data[0];
+              var newName = data[1];
+              var buffer = data[2];
+
+              myDb.updateCookie(user_id);
+              myDb.addImage(user_id, chat_id, fileName, newName).then(function(messageData){
+                console.log("saving " + newName);
+                var message_id = messageData[0];
+                var image_id = messageData[1];
+
+                var dat = {};
+                dat[image_id] = buffer;
+
+                cacheIt(user_id).then(function(){
+                  var sockets = io.sockets.sockets;
+                  for(var socketId in sockets)
+                  {
+                    var cur_socket = sockets[socketId];
+                    console.log("yes");
+                    updateUser2(chat_id, message_id, image_id, cur_socket, [userDict[user_id], ""], dat);
+                  }
+                });
+              });
+            });
+          }
+        });
+      });
+    });
+  });
 
   socket.on("file-upload", function(data){ //data: [chat_id, [fileName, fileData]]
     var chat_id = data[0];
@@ -231,7 +294,6 @@ io.on('connection', function(socket){
                 updateUser(chat_id, cur_socket, [userDict[user_id], ""], buffer);
               }
             });
-
           });
         }
       });
@@ -377,12 +439,7 @@ io.on('connection', function(socket){
           if (result) {
             myDb.getMessages(chat_id, 20).then(function(result){
               cacheMessageArray(result).then(function(userArray){
-                // var newArray = [];
-                // for (var i = 0; i < 100; i++){
-                //   newArray.push(userArray[0]);
-                // }
-                // socket.emit('response', newArray);
-
+                console.log(userArray);
                 socket.emit('response', userArray);
                 chatId = chat_id;
               });
@@ -632,18 +689,35 @@ function updateUser(chat_id, cur_socket, message){ //Update the given user's cha
     if (user_id == null) return;
     myDb.hasChatAccess(chat_id, user_id).then(function(result){
       if (result == true){
-        cur_socket.emit("update_chat", [chat_id, message, null]);
+        cur_socket.emit("update_chat", [chat_id, message, null, -1, -1]);
+      }
+    });
+  });
+}
+
+function updateUser2(chat_id, message_id, image_id, cur_socket, message, imageBuffer){
+  console.log("updateUser2");
+  myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
+    console.log("user_Id: " + user_id);
+    if (user_id == null) return;
+    myDb.hasChatAccess(chat_id, user_id).then(function(result){
+      console.log("hasAccess: "+ result);
+      if (result == true){
+        console.log("emitting");
+        cur_socket.emit("update_chat", [chat_id, message, {imageBuffer}, message_id, image_id]);
       }
     });
   });
 }
 
 function updateUser(chat_id, cur_socket, message, imageBuffer){ //Update the given user's chat
+  console.log("giving message: ");
+  console.log(message);
   myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
     if (user_id == null) return;
     myDb.hasChatAccess(chat_id, user_id).then(function(result){
       if (result == true){
-        cur_socket.emit("update_chat", [chat_id, message, {imageBuffer}]);
+        cur_socket.emit("update_chat", [chat_id, message, {imageBuffer}, -1, -1]);
       }
     });
   });
@@ -787,5 +861,27 @@ function saveFileHelper(fileData, fileName, oldFileName){
     saveFile(fileData, fileName).then(function(buffer){
       resolve([oldFileName, fileName, buffer]);
     })
+  });
+}
+
+
+
+function testGetFile(filePath){
+  return new Promise(function(resolve, reject){
+    var buffers = {};
+    try{
+      console.log(filePath);
+      fs.readFile(filePath, (err, data) => {
+        if (err)
+          console.log(err);
+
+        console.log(data);
+        buffers[0] = data;
+        console.log(buffers);
+        resolve(buffers);
+      });
+    } catch (error){
+
+    }
   })
 }
