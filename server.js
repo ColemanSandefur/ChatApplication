@@ -438,10 +438,20 @@ io.on('connection', function(socket){
         myDb.hasChatAccess(chat_id, result).then(function(result){//returns true if the user has access to the certain chat
           if (result) {
             myDb.getMessages(chat_id, 20).then(function(result){
-              cacheMessageArray(result).then(function(userArray){
-                console.log(userArray);
+              cacheMessageArray(result).then(function(data){
+
+                var userArray = data[0];
+                var imageData = data[1];
                 socket.emit('response', userArray);
-                chatId = chat_id;
+                var stream = ss.createStream({objectMode: true});
+                console.log("streaming");
+                ss(socket).emit("give_images", stream);
+                stream.write(imageData);
+                // var stream = ss.createStream({objectMode: true});
+                //
+                // ss(socket).emit("give-images", stream);
+                //
+                // stream.write();
               });
             });
           }
@@ -462,8 +472,16 @@ io.on('connection', function(socket){
         }
 
         myDb.getMessagesRange(chat_id, message_id, 20).then(function(result){
-          cacheMessageArray(result).then(function(userArray){
+          cacheMessageArray(result).then(function(data){
+
+            var userArray = data[0];
+            var imageData = data[1];
+            console.log(userArray);
             socket.emit('more_message_response', userArray);
+            var stream = ss.createStream({objectMode: true});
+            ss(socket).emit("give_images", stream);
+            stream.write(imageData);
+
             chatId = chat_id;
           });
         });
@@ -766,24 +784,28 @@ function cacheMessageArray(array){
     }
 
     var x = 0;
+    var imageData = {};
     for (var i = 0; i < array.length; i++){
 
-      cacheMessageArrayHelper(i, array[i].user_id).then(function(out){
+      cacheMessageArrayHelper(i, array[i].user_id).then(function(out){// [index, userId]
         array[out[0]].username = userDict[out[1]];
         if (array[out[0]].has_image == 1){
           getFile(array[out[0]].message_id).then(function(data){
-
-            array[out[0]].imageData = data; //{image_id: imageData}
+            for (var key in data){
+              imageData[key] = data[key];
+              array[out[0]].image_id = key;
+            }
+            // imageData[data = data; //{image_id: imageData}
             num++;
             if (num == array.length){
-              resolve(array);
+              resolve([array, imageData]);
               return;
             }
           });
         } else {
           num++;
           if (num == array.length){
-            resolve(array);
+            resolve([array, imageData]);
             return;
           }
         }

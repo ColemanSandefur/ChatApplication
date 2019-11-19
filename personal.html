@@ -204,10 +204,11 @@
             socket.emit("get_more_messages", [active, oldestMessage]);
           }));
           var out = "<ul id=\"message_list\">";
+          console.log(res);
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
 
-            out += formatChat(res[i].username, res[i].message, res[i].imageData, res[i].message_id);
+            out += formatChat(res[i].username, res[i].message, res[i].image_id, res[i].message_id);
           }
           out += "</ul>";
 
@@ -226,7 +227,7 @@
           var oldMessage = oldestMessage;
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
-            out += formatChat(res[i].username, res[i].message, res[i].imageData, res[i].message_id);
+            out += formatChat(res[i].username, res[i].message, res[i].image_id, res[i].message_id);
           }
           out += "</ul>";
           $("#content").prepend($(out));
@@ -257,6 +258,15 @@
 
         socket.on('login_alert', function(){
           $("#content").html("<p id='login'><a align='center' onclick='redirect()'>Please Login</a></p>");
+        });
+
+        ss(socket).on("give_images", function(imageData){
+
+          imageData.on("data", function(data){
+            addImages(data);
+            console.log("images");
+            console.log(data);
+          });
         });
 
         function addMessage(message){
@@ -328,19 +338,15 @@
 
         function formatChat(username, message, imageData){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
-          for (var data in imageData){
-            img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
-            imageDataArray[data] = imageData[data];
-          }
+          if (imageData != null)
+            img += "<img id=\"imageId=" + imageData + "\" style=\"height: 10em;\"\\>";
           return "<li id='message_id=-1'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
 
         function formatChat(username, message, imageData, message_id){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
-          for (var data in imageData){
-            img += "<img id=\"imageId=" + data + "\" style=\"height: 10em;\"\\>";
-            imageDataArray[data] = imageData[data];
-          }
+          if (imageData != null)
+            img += "<img id=\"imageId=" + imageData + "\" style=\"height: 10em;\"\\>";
           return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
 
@@ -350,7 +356,7 @@
           for (var imageId in imageDataArray){
             var imageData = imageDataArray[imageId];
 
-            var blob = new Blob([imageData], {type: "image"});
+            var blob = new Blob([imageData], {type: "image/png"});
             var urlCreator = window.URL || window.webkitURL;
             var imageURL = urlCreator.createObjectURL( blob );
 
