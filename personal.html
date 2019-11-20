@@ -339,14 +339,14 @@
         function formatChat(username, message, imageData){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
           if (imageData != null)
-            img += "<img id=\"imageId=" + imageData + "\" style=\"height: 10em;\"\\>";
+            img += "<img id=\"imageId=" + imageData + "\" style=\"max-height: 10em; max-width: 100%\"\\>";
           return "<li id='message_id=-1'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
 
         function formatChat(username, message, imageData, message_id){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
           if (imageData != null)
-            img += "<img id=\"imageId=" + imageData + "\" style=\"height: 10em;\"\\>";
+            img += "<img id=\"imageId=" + imageData + "\" style=\"max-height: 10em; max-width: 100%\"\\>";
           return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
         }
 
