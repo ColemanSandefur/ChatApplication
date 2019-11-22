@@ -612,6 +612,45 @@ module.exports = {
     })
   },
 
+  removeMessage: function(message_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("DELETE FROM messages WHERE message_id=?", [message_id]).then(function(){
+        resolve();
+      });
+    })
+  },
+
+  getMessageAuthorId: function(message_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT user_id FROM messages WHERE message_id=?", [message_id]).then(function(data){
+        if (data.length == 0){
+          resolve(null);
+          return;
+        }
+
+        resolve(data[0].user_id);
+      });
+    });
+  },
+
+  getMessageAuthor: function(message_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT user_id FROM messages WHERE message_id=?", [message_id]).then(function(data){
+        if (data.length == 0){
+          resolve(null);
+          return;
+        }
+        dbQuery("SELECT username FROM users WHERE user_id", [data[0].user_id]).then(function(data){
+          if (data.length == 0){
+            resolve(null);
+            return;
+          }
+          resolve(data[0].username);
+        })
+      });
+    });
+  },
+
   test: function(){
     dbQuery("SELECT * FROM users WHERE user_id=?", [1]).then(function(result){
       console.log("result: " + result[0].user_id);

@@ -43,15 +43,11 @@ var userDict = {};
 //get the cookies by doing req.cookies; clear with res.clearCookie(name);  res.cookie(cookie name, cookie value)
 
 app.get('/', function(req, res){
-
-  // console.log(req.cookies);
   res.sendFile(__dirname + '/index.html');
 });
 
 app.get('/loginScreen', function(req, res){
   res.sendFile(__dirname + "/login.html");
-  // res.clearCookie('name');
-  // console.log('cookies: ', req.cookies);
 });
 
 app.get('/personal', function(req, res){
@@ -174,27 +170,6 @@ io.on('connection', function(socket){
   socket.on("get-chat-test", function(){
     var stream = ss.createStream({highWaterMark: 1024, objectMode: true});
     myDb.getMessages(17, 20).then(function(result){
-      // cacheMessageArray(result).then(function(userArray){
-      //   ss(socket).emit('give-chat-test', stream);
-      //   console.log(userArray);
-      //
-      //   var start = Date.now();
-      //
-      //
-      //   var buf = Buffer.from(JSON.stringify(userArray));
-      //   console.log(Date.now() - start);
-      //   console.log(buf);
-      //   stream.write(buf);
-      //
-      //
-      //
-      // });
-      // testGetFile("C:\\Users\\colem\\Pictures\\Camera Roll\\WIN_20191010_16_04_53_Pro.mp4").then(function(result){
-      //   ss(socket).emit("give-chat-test", stream);
-      //
-      //   stream.write(result);
-      //   console.log(result[0].length);
-      // })
       getFile(255).then(function(result){
         ss(socket).emit("give-chat-test", stream);
         stream.write(result);
@@ -231,7 +206,6 @@ io.on('connection', function(socket){
 
               myDb.updateCookie(user_id);
               myDb.addImage(user_id, chat_id, fileName, newName).then(function(messageData){
-                console.log("saving " + newName);
                 var message_id = messageData[0];
                 var image_id = messageData[1];
 
@@ -243,8 +217,17 @@ io.on('connection', function(socket){
                   for(var socketId in sockets)
                   {
                     var cur_socket = sockets[socketId];
-                    console.log("yes");
-                    updateUser2(chat_id, message_id, image_id, cur_socket, [userDict[user_id], ""], dat);
+                    // updateUser2(chat_id, message_id, image_id, cur_socket, [userDict[user_id], ""], dat);
+                    // updateUserTest(input[0], curSocket, "update_chat", [userDict[user_id], input[1], result.insertId, user_id]);
+                    
+                    updateUserTest(chat_id, cur_socket, "update_chat", [chat_id, userDict[user_id], "", message_id, user_id, image_id]);
+                    var stream = ss.createStream({objectMode: true});
+
+                    ss(cur_socket).emit("give_images", stream);
+                    console.log("writing");
+                    stream.write(dat);
+
+
                   }
                 });
               });
@@ -277,7 +260,6 @@ io.on('connection', function(socket){
             var fileName = data[0];
             var newName = data[1];
             var buffer = data[2];
-            console.log("saving");
             myDb.updateCookie(user_id);
             myDb.addImage(user_id, chat_id, fileName, newName);
 
@@ -444,7 +426,7 @@ io.on('connection', function(socket){
                 var imageData = data[1];
                 socket.emit('response', userArray);
                 var stream = ss.createStream({objectMode: true});
-                console.log("streaming");
+                console.log(imageData);
                 ss(socket).emit("give_images", stream);
                 stream.write(imageData);
                 // var stream = ss.createStream({objectMode: true});
@@ -476,7 +458,7 @@ io.on('connection', function(socket){
 
             var userArray = data[0];
             var imageData = data[1];
-            console.log(userArray);
+            console.log(imageData);
             socket.emit('more_message_response', userArray);
             var stream = ss.createStream({objectMode: true});
             ss(socket).emit("give_images", stream);
@@ -485,9 +467,33 @@ io.on('connection', function(socket){
             chatId = chat_id;
           });
         });
-      })
-    })
-  })
+      });
+    });
+  });
+
+  socket.on("removeMessage", function(data){
+    var message_id = data[1];
+    var chat_id = data[0];
+
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      myDb.getMessageAuthorId(message_id).then(function(author_id){
+        if (author_id != user_id){
+          return;
+        }
+
+        myDb.removeMessage(message_id);
+
+        var sockets = io.sockets.sockets;
+
+        for(var socketId in sockets)
+        {
+          var cur_socket = sockets[socketId]; //loop through and do whatever with each connected socket
+
+          updateUserTest(chat_id, cur_socket, "removed_image", [chat_id, message_id]);
+        }
+      });
+    });
+  });
 
 
   socket.on("chatMessage", function(input){ //user makes a request to add a message if they do, it updates users currently viewing the chat
@@ -526,7 +532,9 @@ io.on('connection', function(socket){
 
               // cur_socket.emit('update_chat', input[0]);
               //...
-              updateUser(input[0], cur_socket, [userDict[user_id], input[1]]);
+              // updateUser(input[0], cur_socket, [userDict[user_id], input[1]]);
+              // console.log(input[1]);
+              updateUserTest(input[0], cur_socket, "update_chat", [input[0], userDict[user_id], input[1], result.insertId, user_id]);
             }
             // io.emit("update_chat", input[1]);
           });
@@ -713,15 +721,23 @@ function updateUser(chat_id, cur_socket, message){ //Update the given user's cha
   });
 }
 
-function updateUser2(chat_id, message_id, image_id, cur_socket, message, imageBuffer){
-  console.log("updateUser2");
+function updateUserTest(chat_id, cur_socket, event_name, data){
   myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
-    console.log("user_Id: " + user_id);
+    if (user_id == null) return;
+
+    myDb.hasChatAccess(chat_id, user_id).then(function(result){
+      if (result == true){
+        cur_socket.emit(event_name, data);
+      }
+    });
+  })
+}
+
+function updateUser2(chat_id, message_id, image_id, cur_socket, message, imageBuffer){
+  myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
     if (user_id == null) return;
     myDb.hasChatAccess(chat_id, user_id).then(function(result){
-      console.log("hasAccess: "+ result);
       if (result == true){
-        console.log("emitting");
         cur_socket.emit("update_chat", [chat_id, message, {imageBuffer}, message_id, image_id]);
       }
     });
@@ -729,8 +745,6 @@ function updateUser2(chat_id, message_id, image_id, cur_socket, message, imageBu
 }
 
 function updateUser(chat_id, cur_socket, message, imageBuffer){ //Update the given user's chat
-  console.log("giving message: ");
-  console.log(message);
   myDb.getIdFromCookie(cur_socket.id).then(function(user_id){
     if (user_id == null) return;
     myDb.hasChatAccess(chat_id, user_id).then(function(result){
@@ -892,14 +906,11 @@ function testGetFile(filePath){
   return new Promise(function(resolve, reject){
     var buffers = {};
     try{
-      console.log(filePath);
       fs.readFile(filePath, (err, data) => {
         if (err)
           console.log(err);
 
-        console.log(data);
         buffers[0] = data;
-        console.log(buffers);
         resolve(buffers);
       });
     } catch (error){

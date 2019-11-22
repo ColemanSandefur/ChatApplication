@@ -51,9 +51,22 @@
     <script>
       var active = -1;
       var oldestMessage = -1;
+      var socket;
+      var user_id;
+      var picQueue = [];
 
-      function addPicturePompt(){
-        alert('hi');
+      function removeMessage(div){
+        var message_id = $(div).parent().parent().attr("id");
+        message_id = message_id.substring("message_id=".length);
+
+        socket.emit("removeMessage", [active, message_id]);
+      }
+
+      function removeMessage2(div){
+        var message_id = $(div).parent().attr("id");
+        message_id = message_id.substring("message_id=".length);
+
+        socket.emit("removeMessage", [active, message_id]);
       }
 
 
@@ -76,7 +89,17 @@
       }
 
       $(function () {
-        var socket = io();
+        socket = io();
+
+        socket.on("removed_image", function(data){
+          var chat_id = data[0];
+          var message_id = data[1];
+
+          if (chat_id != active)
+            return;
+
+          $("#message_id\\=" + message_id).remove();
+        });
 
         $("#addPictureButton").click(function(){
           $("#popup").css("visibility", "visible");
@@ -190,8 +213,9 @@
           hideUserPrompt();
         });
 
-        socket.on("give_user_id", function(user_id){ // displays the user_id mostly for testing purposes
-          $(".displayId").html("<p>user_id: " + user_id + "</p>");
+        socket.on("give_user_id", function(user_id2){ // displays the user_id mostly for testing purposes
+          user_id = user_id2;
+          // $(".displayId").html("<p>user_id: " + user_id + "</p>");
         });
 
         var imageDataArray = {};
@@ -204,11 +228,10 @@
             socket.emit("get_more_messages", [active, oldestMessage]);
           }));
           var out = "<ul id=\"message_list\">";
-          console.log(res);
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
 
-            out += formatChat(res[i].username, res[i].message, res[i].image_id, res[i].message_id);
+            out += formatChat(res[i].username, res[i].user_id, res[i].message, res[i].image_id, res[i].message_id);
           }
           out += "</ul>";
 
@@ -227,7 +250,7 @@
           var oldMessage = oldestMessage;
           oldestMessage = res[res.length-1].message_id;
           for (var i = res.length - 1; i > -1; i--){
-            out += formatChat(res[i].username, res[i].message, res[i].image_id, res[i].message_id);
+            out += formatChat(res[i].username, res[i].user_id, res[i].message, res[i].image_id, res[i].message_id);
           }
           out += "</ul>";
           $("#content").prepend($(out));
@@ -243,13 +266,18 @@
         socket.on('update_chat', function(input){ // input array of chat_id and message; This is 'called' whenever a message is recieved
           //Logic for updating chat; if current chat = the chat that needs updating it appends the message to the chat
           //Else it alerts the user about the chat having a new message by putting a yellow border around the chat that got updated (alert class)
-
+          //input: [chat_id, username, message, message_id, user_id, (possibly)img_data]
           if (active == input[0]){
-            if (input[2] != null){
-              addMessage(formatChat(input[1][0], input[1][1], input[2].imageBuffer));
+            console.log("update");
+            if (input[5] != null){
+              console.log(input[5]);
+
+              addMessage(formatChat(input[1], input[4], input[2], input[5], input[3]));
+              // formatChat(username, user_id2, message, imageData, message_id)
+
               addImages(input[2].imageBuffer);
             } else {
-              addMessage(formatChat(input[1][0], input[1][1], {}));
+              addMessage(formatChat(input[1], input[4], input[2], null, input[3]));
             }
           } else {
             $("#chat\\=" + input[0]).addClass("alert");
@@ -261,11 +289,9 @@
         });
 
         ss(socket).on("give_images", function(imageData){
-
+          console.log("getting images");
           imageData.on("data", function(data){
             addImages(data);
-            console.log("images");
-            console.log(data);
           });
         });
 
@@ -336,22 +362,29 @@
           $("#chooseUser").html(result);
         });
 
-        function formatChat(username, message, imageData){ //puts the username, and the message into the right format for displaying to the user
-          var img = "";
-          if (imageData != null)
-            img += "<img id=\"imageId=" + imageData + "\" style=\"max-height: 10em; max-width: 100%\"\\>";
-          return "<li id='message_id=-1'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
-        }
+        socket.on("removed_image", function(data){
+          var chat_id = data[0];
+          var message_id = data[1];
 
-        function formatChat(username, message, imageData, message_id){ //puts the username, and the message into the right format for displaying to the user
+          $("li#message_id\\=" + message_id).remove();
+        });
+
+
+
+        function formatChat(username, user_id2, message, imageData, message_id){ //puts the username, and the message into the right format for displaying to the user
           var img = "";
           if (imageData != null)
             img += "<img id=\"imageId=" + imageData + "\" style=\"max-height: 10em; max-width: 100%\"\\>";
-          return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
+
+          if (user_id == user_id2)
+            return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td><div style='float:right; padding-right: 5px; padding-left: 5px; cursor: pointer; user-select: none;' onclick='removeMessage2(this)'><a >x</a></div></table></li>";
+          else {
+            return "<li id='message_id=" + message_id + "'><table><td class='user' style='vertical-align:top'>" + username + ":</td><td class='message'>" + img + message + "</td></table></li>";
+          }
+
         }
 
         async function addImages(imageDataArray){
-          console.log(imageDataArray);
           await new Promise(resolve => setTimeout(resolve, 0));
           for (var imageId in imageDataArray){
             var imageData = imageDataArray[imageId];
