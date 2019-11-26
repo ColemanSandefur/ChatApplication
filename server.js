@@ -219,12 +219,11 @@ io.on('connection', function(socket){
                     var cur_socket = sockets[socketId];
                     // updateUser2(chat_id, message_id, image_id, cur_socket, [userDict[user_id], ""], dat);
                     // updateUserTest(input[0], curSocket, "update_chat", [userDict[user_id], input[1], result.insertId, user_id]);
-                    
+
                     updateUserTest(chat_id, cur_socket, "update_chat", [chat_id, userDict[user_id], "", message_id, user_id, image_id]);
                     var stream = ss.createStream({objectMode: true});
 
                     ss(cur_socket).emit("give_images", stream);
-                    console.log("writing");
                     stream.write(dat);
 
 
@@ -426,7 +425,6 @@ io.on('connection', function(socket){
                 var imageData = data[1];
                 socket.emit('response', userArray);
                 var stream = ss.createStream({objectMode: true});
-                console.log(imageData);
                 ss(socket).emit("give_images", stream);
                 stream.write(imageData);
                 // var stream = ss.createStream({objectMode: true});
@@ -458,7 +456,6 @@ io.on('connection', function(socket){
 
             var userArray = data[0];
             var imageData = data[1];
-            console.log(imageData);
             socket.emit('more_message_response', userArray);
             var stream = ss.createStream({objectMode: true});
             ss(socket).emit("give_images", stream);

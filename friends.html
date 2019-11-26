@@ -98,12 +98,25 @@
           var request = input[0]; //(boolean)[friend, blocked, requested]
           var dictionary = input[1]; //{user_id: [username, requestor_id (if is being requested to be a friend)]}
 
-
           if (Object.keys(dictionary).length == 0){
             $(".content").html("<ul><li>No Users Found</li></ul>");
             return;
           }
 
+          if (request[0] == true){
+            $(".content").html(formatFriends(dictionary));
+
+            $(".friend").find(".decline").click(function(){
+              var id = $(this).parent().attr("id");
+              var user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+              $(this).parent().parent().remove();
+
+              socket.emit("removeFriend", user_id);
+            });
+
+            return;
+          }
 
           if (request[2] == true){
             $('.content').html(formatRequests(dictionary));
@@ -172,6 +185,7 @@
         window.location.pathname = "/personal";
       }
 
+      // Format each line of friend requests to have a decline and accept button for your friend requests
       function formatRequests(dictionary){
         var res = "<ul>";
         for (var key in dictionary){
@@ -186,6 +200,19 @@
             res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='myRequest' id='userId=" + key + "'><a class='decline'>Cancel</a></span></li>"
           }
         }
+        res += "</ul>";
+        return res;
+      }
+
+      // Format each line of friends to have a delete button
+      function formatFriends(dictionary){
+        var res = "<ul>";
+        for (var key in dictionary){
+          var name = dictionary[key][0];
+
+          res += "<li>" + name + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position: absolute; right:2.5rem;' class='friend' id='userId=" + key + "'><a class='decline'>Remove</a></span></li>";
+        }
+
         res += "</ul>";
         return res;
       }

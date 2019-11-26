@@ -268,9 +268,7 @@
           //Else it alerts the user about the chat having a new message by putting a yellow border around the chat that got updated (alert class)
           //input: [chat_id, username, message, message_id, user_id, (possibly)img_data]
           if (active == input[0]){
-            console.log("update");
             if (input[5] != null){
-              console.log(input[5]);
 
               addMessage(formatChat(input[1], input[4], input[2], input[5], input[3]));
               // formatChat(username, user_id2, message, imageData, message_id)
@@ -289,7 +287,6 @@
         });
 
         ss(socket).on("give_images", function(imageData){
-          console.log("getting images");
           imageData.on("data", function(data){
             addImages(data);
           });
