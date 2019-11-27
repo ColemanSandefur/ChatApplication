@@ -600,7 +600,12 @@ io.on('connection', function(socket){
         socket.emit("login_alert");
         return;
       }
-      myDb.setUserRelation(user_id, friend_id, true, false, false);
+
+      myDb.getRequestor(user_id, friend_id).then(function(requestor_id){
+        if (requestor_id != user_id){
+          myDb.setUserRelation(user_id, friend_id, true, false, false);
+        }
+      });
     })
   });
 
@@ -636,6 +641,37 @@ io.on('connection', function(socket){
       });
     });
   });
+
+  socket.on("blockUser", function(request_user_id){
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      if (user_id == null){
+        socket.emit("login_alert");
+        return;
+      }
+
+      myDb.setUserRelation(user_id, request_user_id, false, true, false).then(function(){
+      });
+    });
+  })
+
+  socket.on("unblockUser", function(request_user_id){
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      if (user_id == null){
+        socket.emit("login_alert");
+        return;
+      }
+
+      myDb.getRequestor(user_id, request_user_id).then(function(requestor_id){//returns -1 if there is none
+        if (requestor_id < 0){
+          return;
+        }
+
+        if (user_id == requestor_id){
+          myDb.setUserRelation(user_id, request_user_id, false, false, false);
+        }
+      });
+    })
+  })
 
 
 

@@ -339,7 +339,7 @@ module.exports = {
 
       dbQuery("SELECT user_id1, user_id2, requestor_id FROM user_relation WHERE (user_id1=? AND user_id2=?) ORDER BY user_id1", [user_id_small, user_id_big]).then(function(result){
         if (result.length > 0){
-          if (pending == true){
+          if (pending || blocked){
             dbQuery("UPDATE user_relation SET friend=?, blocked=?, pending=?, requestor_id=? WHERE user_id1=? AND user_id2=?", [states[0], states[1], states[2], user_id, user_id_small, user_id_big]).then(function(result){
               resolve();
             });
@@ -349,7 +349,7 @@ module.exports = {
             });
           }
         } else {
-          if (pending == true){
+          if (pending || blocked){
             dbQuery("INSERT INTO user_relation (user_id1, user_id2, friend, blocked, pending, requestor_id) VALUES (?, ?, ?, ?, ?, ?)", [user_id_small, user_id_big, states[0], states[1], states[2], user_id]).then(function(result){
               resolve();
             });
@@ -452,6 +452,20 @@ module.exports = {
       var user_small = Math.min(user_id1, user_id2);
       dbQuery("SELECT * from user_relation WHERE user_id1=? AND user_id2=? AND friend=? AND blocked=? AND pending=?", [user_small, user_big, friend, blocked, pending]).then(function(result){
         resolve(result.length > 0);
+      });
+    });
+  },
+
+  getRequestor: function(user_id1, user_id2){
+    return new Promise(function(resolve, reject){
+      var user_big = Math.max(user_id1, user_id2);
+      var user_small = Math.min(user_id1, user_id2);
+      dbQuery("SELECT requestor_id from user_relation WHERE user_id1=? AND user_id2=?", [user_small, user_big]).then(function(result){
+        if (result.length == 0){
+          resolve(-1);
+          return;
+        }
+        resolve(result[0].requestor_id);
       });
     });
   },

@@ -66,10 +66,9 @@ body {
   cursor: pointer;
 }
 
-.otherRequest .accept{
+.accept{
   background-color: green;
   border-radius: 2px;
-  margin-right: 3px;
   padding: 0 2px;
   cursor: pointer;
 }

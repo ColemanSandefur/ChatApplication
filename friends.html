@@ -69,14 +69,23 @@
           var output = "<ul>";
 
           for (var key in friends){
-            output += "<li>" + friends[key] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;'><a id='userId=" + key + "'>Add Friend</a></span></li>";
+            output += "<li>" + friends[key] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' id='userId=" + key + "'><a class='decline' style='margin-right: 3px'>Block</a><a class='accept' id='userId=" + key + "'>Add Friend</a></span></li>";
           }
 
           output += "</ul>";
 
           $("#results").html(output);
 
-          $("#results a").click(function(){
+          $("#results").find(".decline").click(function(){
+            id = $(this).parent().attr("id");
+            user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+            socket.emit("blockUser", user_id);
+
+            $(this).parent().parent().remove();
+          });
+
+          $("#results").find(".accept").click(function(){
             id = $(this).attr("id");
             user_id = id.substring(id.indexOf("userId=") + "userId=".length);
 
@@ -117,6 +126,23 @@
 
             return;
           }
+
+          if (request[1]){
+            $(".content").html(formatBlocked(dictionary));
+
+
+            $(".blocked").find(".decline").click(function(){
+              var id = $(this).parent().attr("id");
+              var user_id = id.substring(id.indexOf("userId=") + "userId=".length);
+
+              $(this).parent().parent().remove();
+
+              socket.emit("unblockUser", user_id);
+            });
+
+            return;
+          }
+
 
           if (request[2] == true){
             $('.content').html(formatRequests(dictionary));
@@ -195,7 +221,7 @@
             continue;
 
           if (req_id == key) {
-            res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='otherRequest' id='userId=" + key + "'><a class='accept'>Accept</a><a class='decline'>Decline</a></span></li>"
+            res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='otherRequest' id='userId=" + key + "'><a class='accept' style='margin-right: 3px'>Accept</a><a class='decline'>Decline</a></span></li>"
           } else {
             res += "<li>" + dictionary[key][0] + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position:absolute;right:2.5rem;' class='myRequest' id='userId=" + key + "'><a class='decline'>Cancel</a></span></li>"
           }
@@ -214,6 +240,18 @@
         }
 
         res += "</ul>";
+        return res;
+      }
+
+      function formatBlocked(dictionary){
+        var res = "<ul>";
+        for (var key in dictionary){
+          var name = dictionary[key][0];
+
+          res += "<li>" + name + "<span style='color:#a9a9a9'>\t#" + key + "</span><span style='position: absolute; right:2.5rem;' class='blocked' id='userId=" + key + "'><a class='decline'>Remove</a></span></li>"
+        }
+
+        res+= "</ul>";
         return res;
       }
     </script>
