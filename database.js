@@ -71,8 +71,8 @@ module.exports = {
 
   updateCookie: function (user_id){
     var now = new Date();
-    now.setTime(now.getTime() - (60* 60 * 1000 * 5));
-    var date = (now.toISOString().slice(0, 19).replace('T', ' '))
+    now.setTime(now.getTime() - (now.getTimezoneOffset() * 60 * 1000));
+    var date = (now.toISOString().slice(0, 19).replace('T', ' '));
     dbQuery("UPDATE logged_users SET signed_in=? WHERE user_id=?", [date, user_id]);
   },
 
@@ -265,7 +265,6 @@ module.exports = {
   getChatInfo: function(chat_id){
     return new Promise(function(resolve, reject){
       dbQuery("SELECT name, description FROM chat_handler WHERE chat_id=?", [chat_id]).then(function(result){
-        console.log(result[0]);
         if (result.length == 0){
           resolve();
           return;
@@ -672,21 +671,16 @@ module.exports = {
   },
 
   clearRandomImages: function(){
-    console.log("yes");
     return new Promise(function(resolve, reject){
       dbQuery("SELECT * FROM messages WHERE has_image=?", [1]).then(function(result){
-        console.log("no");
         if (result.length == 0){
           resolve();
           return;
         }
 
-        console.log("maybe");
-
         var complete = 0;
 
         function removeMessages(message_id) {
-          console.log("hello world!");
           dbQuery("SELECT * FROM image_handler WHERE message_id=?", [message_id]).then(function(result){
             if (result.length == 0){
               dbQuery("DELETE FROM messages WHERE message_id=?", [message_id]).then(function(){
@@ -712,8 +706,36 @@ module.exports = {
           removeMessages(message_id);
         }
 
-      })
-    })
+      });
+    });
+  },
+
+  getAccountInfo: function(user_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT * FROM users WHERE user_id=?", [user_id]).then(function(result){
+        if (result.length == 0){
+          resolve(false);
+          return;
+        }
+
+        resolve(result[0]);
+        return;
+      });
+    });
+  },
+
+  getAccountPicture: function(image_id){
+    return new Promise(function(resolve, reject){
+      dbQuery("SELECT image_path FROM profile_images WHERE image_id=?", [image_id]).then(function(result){
+        if (result.length == 0){
+          resolve(null);
+          return;
+        }
+
+        resolve(result[0].image_path);
+        return;
+      });
+    });
   }
 
 
@@ -819,7 +841,7 @@ function getUsersFromNameFunction(part_username){
       });
     }
 
-  })
+  });
 }
 
 function getImageHelper(imageIds){ //returns a promise of a image_id: path pair

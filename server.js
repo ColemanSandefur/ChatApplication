@@ -1,3 +1,4 @@
+//jshint esversion:6
 var bodyParser = require("body-parser");
 var express = require('express');
 
@@ -63,13 +64,17 @@ app.get('/friends', function(req, res){
 });
 
 app.get("/uploadImage", function(req, res){
-  res.sendFile(__dirname + "/uploadImage.html");;
-})
+  res.sendFile(__dirname + "/uploadImage.html");
+});
+
+app.get("/myAccount", function(req, res){
+  res.sendFile(__dirname + "/myAccount.html");
+});
 
 app.get("/unassignedImages", function(req,res){
   res.send("hi");
   myDb.clearRandomImages();
-})
+});
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ////  POST  ///////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,15 +112,20 @@ app.post('/loginScreen', function(req, res){
 });
 
 app.post("/createAccount", function(req, res){
-  if (req.body.username.trim().length == 0 || req.body.password.trim().length == 0 || req.body.confirmPass.trim().length == 0 || req.body.email.trim().length == 0)
-    res.redirect("/createAccount");
+  if (req.body.username.trim().length == 0 || req.body.password.trim().length == 0 || req.body.confirmPass.trim().length == 0 || req.body.email.trim().length == 0){
+    res.sendFile(__dirname + "/createAccount.html");
+    return;
+  }
 
   var username = cleanse(req.body.username.trim());
   var pass = cleanse(req.body.password.trim());
 
-  if (req.body.password.trim() != req.body.confirmPass.trim())
-    res.redirect("/createAccount");
-    myDb.createUser(username, pass, req.body.email.trim()).then(function(){
+  if (req.body.password.trim() != req.body.confirmPass.trim()){
+    res.sendFile(__dirname + "/createAccount.html");
+    return;
+  }
+
+  myDb.createUser(username, pass, req.body.email.trim()).then(function(){
     res.redirect("/personal");
   });
 });
@@ -170,7 +180,7 @@ io.on('connection', function(socket){
   socket.on("get-chat-test", function(){
     var stream = ss.createStream({highWaterMark: 1024, objectMode: true});
     myDb.getMessages(17, 20).then(function(result){
-      getFile(255).then(function(result){
+      getFileFromMessage(255).then(function(result){
         ss(socket).emit("give-chat-test", stream);
         stream.write(result);
       });
@@ -185,9 +195,9 @@ io.on('connection', function(socket){
 
       myDb.getIdFromCookie(socket.id).then(function(user_id){
         myDb.hasChatAccess(chat_id, user_id).then(function(hasAccess){
-          // if (!hasAccess){
-          //   return;
-          // }
+          if (!hasAccess){
+            return;
+          }
 
           for (var i = 0; i < fileArray.length; i++){
             //Get data from fileArra
@@ -217,8 +227,6 @@ io.on('connection', function(socket){
                   for(var socketId in sockets)
                   {
                     var cur_socket = sockets[socketId];
-                    // updateUser2(chat_id, message_id, image_id, cur_socket, [userDict[user_id], ""], dat);
-                    // updateUserTest(input[0], curSocket, "update_chat", [userDict[user_id], input[1], result.insertId, user_id]);
 
                     updateUserTest(chat_id, cur_socket, "update_chat", [chat_id, userDict[user_id], "", message_id, user_id, image_id]);
                     var stream = ss.createStream({objectMode: true});
@@ -351,7 +359,7 @@ io.on('connection', function(socket){
             }
           });
         }
-      })
+      });
     });
   });
 
@@ -395,7 +403,7 @@ io.on('connection', function(socket){
             throw err;
           });
         });
-      })
+      });
     });
   });
 
@@ -413,6 +421,7 @@ io.on('connection', function(socket){
         socket.emit('login_alert');
         return;
       }
+      var user_id = result;
       myDb.getUserId(result).then(function(result){
         if (result == null)
           return;
@@ -427,11 +436,7 @@ io.on('connection', function(socket){
                 var stream = ss.createStream({objectMode: true});
                 ss(socket).emit("give_images", stream);
                 stream.write(imageData);
-                // var stream = ss.createStream({objectMode: true});
-                //
-                // ss(socket).emit("give-images", stream);
-                //
-                // stream.write();
+                myDb.updateCookie(user_id);
               });
             });
           }
@@ -443,7 +448,7 @@ io.on('connection', function(socket){
 
 
   socket.on("get_more_messages", function(array){
-    var chat_id = array[0]
+    var chat_id = array[0];
     var message_id = array[1];
     myDb.getIdFromCookie(socket.id).then(function(user_id){
       myDb.hasChatAccess(user_id).then(function(access){
@@ -527,13 +532,8 @@ io.on('connection', function(socket){
             {
               var cur_socket = sockets[socketId]; //loop through and do whatever with each connected socket
 
-              // cur_socket.emit('update_chat', input[0]);
-              //...
-              // updateUser(input[0], cur_socket, [userDict[user_id], input[1]]);
-              // console.log(input[1]);
               updateUserTest(input[0], cur_socket, "update_chat", [input[0], userDict[user_id], input[1], result.insertId, user_id]);
             }
-            // io.emit("update_chat", input[1]);
           });
         });
       });
@@ -588,10 +588,6 @@ io.on('connection', function(socket){
         socket.emit("friendable_users", users);
       });
     });
-
-    // myDb.getUsersFromName(username).then(function(users){
-    //   socket.emit("friendable_users", users);
-    // });
   });
 
   socket.on("acceptFriend", function(friend_id){
@@ -606,7 +602,7 @@ io.on('connection', function(socket){
           myDb.setUserRelation(user_id, friend_id, true, false, false);
         }
       });
-    })
+    });
   });
 
   socket.on("addFriendRequest", function(request_user_id){
@@ -628,7 +624,7 @@ io.on('connection', function(socket){
 
       myDb.setUserRelation(user_id, request_user_id, false, false, false);
     });
-  })
+  });
 
   socket.on("removeFriend", function(request_user_id){
     myDb.getIdFromCookie(socket.id).then(function(user_id){
@@ -652,7 +648,7 @@ io.on('connection', function(socket){
       myDb.setUserRelation(user_id, request_user_id, false, true, false).then(function(){
       });
     });
-  })
+  });
 
   socket.on("unblockUser", function(request_user_id){
     myDb.getIdFromCookie(socket.id).then(function(user_id){
@@ -670,13 +666,40 @@ io.on('connection', function(socket){
           myDb.setUserRelation(user_id, request_user_id, false, false, false);
         }
       });
-    })
-  })
+    });
+  });
 
 
+  // myAccount
+
+  socket.on("get_account_info", function(){
+    myDb.getIdFromCookie(socket.id).then(function(user_id){
+      if (user_id == null){
+        socket.emit("login_alert");
+        return;
+      }
+
+      myDb.getAccountInfo(user_id).then(function(result){
+        delete result.pass_hash;
+
+        var image_id = result.image_id;
+        delete result.image_id;
+
+        socket.emit("give_account_info", result);
+
+        if (image_id == null) return;
+        myDb.getAccountPicture(image_id).then(function(path){
+          getFile(path).then(function(dat){
+            var stream = ss.createStream({objectMode: true});
+            ss(socket).emit("give_account_picture", stream);
+            stream.write(dat);
+          });
 
 
-
+        });
+      });
+    });
+  });
 });
 
 /*
@@ -686,7 +709,6 @@ io.on('connection', function(socket){
 */
 
 function randomLetters(length){ //Helper for adding a cookie
-  var numbers = "1234567890";
   var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefhijklmnopqrstuvwxyz1234567890";
   var output = "";
   for (var x = 0; x < length; x++){
@@ -763,7 +785,7 @@ function updateUserTest(chat_id, cur_socket, event_name, data){
         cur_socket.emit(event_name, data);
       }
     });
-  })
+  });
 }
 
 function updateUser2(chat_id, message_id, image_id, cur_socket, message, imageBuffer){
@@ -837,7 +859,7 @@ function cacheMessageArray(array){
       cacheMessageArrayHelper(i, array[i].user_id).then(function(out){// [index, userId]
         array[out[0]].username = userDict[out[1]];
         if (array[out[0]].has_image == 1){
-          getFile(array[out[0]].message_id).then(function(data){
+          getFileFromMessage(array[out[0]].message_id).then(function(data){
             for (var key in data){
               imageData[key] = data[key];
               array[out[0]].image_id = key;
@@ -893,7 +915,7 @@ function cacheNameArray(array){ //array is userid: username
   });
 }
 
-function getFile(message_id){
+function getFileFromMessage(message_id){
   return new Promise(function(resolve, reject){
     myDb.getImage(message_id).then(function(data){// data: {image_id: image_filepath}
       var tot = 0;
@@ -904,9 +926,9 @@ function getFile(message_id){
             buffers[newData[0]] = newData[1];
             tot++;
             if (tot == Object.keys(data).length){
-              resolve(buffers)
+              resolve(buffers);
             }
-          })
+          });
         } catch (error) {
           console.log(error);
         }
@@ -925,11 +947,19 @@ function getFileHelper(filePath, imageId){
   });
 }
 
+function getFile(filePath){
+  return new Promise(function(resolve, reject){
+    fs.readFile(filePath, (err, data) => {
+      resolve(data);
+    });
+  });
+}
+
 function saveFileHelper(fileData, fileName, oldFileName){
   return new Promise(function(resolve, reject){
     saveFile(fileData, fileName).then(function(buffer){
       resolve([oldFileName, fileName, buffer]);
-    })
+    });
   });
 }
 
@@ -949,5 +979,5 @@ function testGetFile(filePath){
     } catch (error){
 
     }
-  })
+  });
 }

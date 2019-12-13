@@ -1,0 +1,122 @@
+* {
+  font-family: 'Open Sans', sans-serif;
+}
+
+body {
+  background-color: #5f5f5f;
+  margin: 0;
+}
+
+#top_bar{
+  position: sticky;
+  top:0;
+  background-color: #4d4d4d;
+}
+#top_bar a, #top_bar div{
+  user-select:none;
+}
+#login {
+  text-align: center;
+  margin: 0 auto;
+}
+
+#login a {
+  padding: .5em;
+  margin: 1em;
+  display:inline-block;
+  background-color: #8f8f8f;
+  cursor:pointer;
+  user-select:none;
+  border-radius: 3px;
+}
+
+span.center {
+  vertical-align: middle;
+  display:inline-block;
+}
+span.centerHelper {
+  vertical-align: middle;
+  display: inline-block;
+  height: 100%;
+}
+
+.toolbar {
+  height: 2rem;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.toolbar a {
+  margin: .25rem 5px;
+  height: 1.5rem;
+}
+
+.toolbar a {
+  white-space: normal;
+  cursor:pointer;
+  user-select:none;
+  background-color:red;
+  border-style: none;
+  border-radius: 3px;
+  display:inline-block;
+  margin: .25rem 5px;
+  text-align: center;
+  vertical-align: middle;
+  /* width: 4rem; */
+  padding: 1px 2px;
+}
+
+.side-bar {
+  position:fixed;
+  top: 0;
+  left: 0;
+  display:inline-block;
+  width: 10rem;
+  height: 100%;
+  background-color: #5f5f5f;
+  border-width: 0;
+  border-right-width: 3px;
+  border-style: solid;
+  border-color: #3b3b3b;
+  margin-top: 2rem;
+}
+
+.side-bar ul {
+  text-align: center;
+  width: 9rem;
+  padding: 0;
+  margin: auto;
+}
+
+.side-bar li {
+  color: white;
+  background-color: #4b4b4b;
+  border-style: none;
+  border-radius: 3px;
+  list-style-type: none;
+  margin: 5px 0;
+  cursor:pointer;
+}
+
+.content {
+  display:inline-block;
+  height: 100%;
+  margin-left: 12rem;
+  margin-top: 2rem;
+  width: calc(100% - 14rem);
+}
+
+#pictureFrame {
+  background-color: #4b4b4b;
+  padding: .5rem;
+  color: white;
+  border-radius: 1rem;
+}
+
+ul#account_details_list li {
+  list-style-type: none;
+  border-radius: 1rem;
+  background-color: #4b4b4b;
+  padding-left: .5rem;
+  color: white;
+}

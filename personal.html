@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Your Messages</title>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="personal.css">
+    <link rel="stylesheet" href="css\personal.css">
   </head>
   <body>
 
@@ -13,6 +13,7 @@
       <div class="toolbar">
         <a onclick="goHome()"><span class="centerHelper"></span><span class="center">home</span></a>
         <a onclick="goFriends()"><span class="centerHelper"></span><span class="center">friends</span></a>
+        <a onclick="goAccount()" style='position: absolute; right: 0px'><span class="centerHelper"></span><span class="center">my account</span></a>
       </div>
       <div id="recent_messages">
       </div>
@@ -403,6 +404,10 @@
       }
       function goHome(){
         window.location.pathname = "/";
+      }
+
+      function goAccount(){
+        window.location.pathname = "/myAccount";
       }
 
 

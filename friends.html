@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Your Friends</title>
-    <link rel="stylesheet" href="friends.css">
+    <link rel="stylesheet" href="css\friends.css">
     <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
     <style>
       #top_bar {
@@ -18,6 +18,7 @@
       <div class="toolbar">
         <a onclick="goHome()"><span class="centerHelper"></span><span class="center">home</span></a>
         <a onclick="goPersonal()"><span class="centerHelper"></span><span class="center">personal</span></a>
+        <a onclick="goAccount()" style='position: absolute; right: 0px'><span class="centerHelper"></span><span class="center">my account</span></a>
       </div>
     </div>
     <div class="side-bar">
@@ -209,6 +210,10 @@
 
       function goPersonal(){
         window.location.pathname = "/personal";
+      }
+
+      function goAccount(){
+        window.location.pathname = "/myAccount";
       }
 
       // Format each line of friend requests to have a decline and accept button for your friend requests

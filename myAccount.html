@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>My Account</title>
+    <link rel="stylesheet" href="css\myAccount.css">
+  </head>
+  <body>
+    <div id="top_bar">
+      <div class="toolbar">
+        <a onclick="goHome()"><span class="centerHelper"></span><span class="center">home</span></a>
+        <a onclick="goPersonal()"><span class="centerHelper"></span><span class="center">personal</span></a>
+        <a onclick="goFriends()" ><span class="centerHelper"></span><span class="center">friends</span></a>
+      </div>
+    </div>
+    <div class="side-bar">
+      <ul>
+        <li id="account_details">
+          Account Details
+        </li>
+        <li id="app_settings">
+          App Settings
+        </li>
+      </ul>
+    </div>
+
+    <div class="content">
+      <div style="" id='pictureFrame'>
+        <img id="profilePicture" style="width: 5rem; height: 5rem;border-radius: 100%; vertical-align:middle"><span id="username" style="font-size: 3rem; margin-left: 1rem; vertical-align: middle;"></span><h1 id="user_id" style="float: right;"></h1>
+      </div>
+      <ul style="padding: 0" id='account_details_list'>
+        <li id="email"></li>
+        <li id="date_joined"></li>
+      </ul>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/socket.io-stream.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      var socket;
+
+      $(function(){
+        socket = io();
+
+        socket.emit("get_account_info");
+
+        /*
+         * App Settings Tab
+         */
+
+        $("#app_settings").click(function(){
+          socket.emit("get_app_settings");
+        });
+
+        socket.on("give_app_settings", function(data){
+
+        });
+
+        /*
+         * Account Details Tab
+         */
+
+        $("#account_details").click(function(){ // Request account details
+          socket.emit("get_account_info");
+          $(".content").html();
+        });
+
+        socket.on("give_account_info", function(data){ // Recieving account details
+          console.log(data);
+
+          $("#username").text(data.username);
+          $("#user_id").text("#" + data.user_id);
+          $("#email").html($("<h3>email:  " + data.email + "</h1>"));
+          $("#date_joined").html($("<h3>date joined:  " + new Date(Date.parse(data.date_joined)).toDateString() + "</h1>"));
+        });
+
+        ss(socket).on("give_account_picture", function(stream){ // Recieving account picture;
+          stream.on("data", function(data){
+            console.log(data);
+            console.log(Object.keys(data).length);
+            imageData = data;
+
+            var blob = new Blob([imageData], {type: "image/png"});
+            var urlCreator = window.URL || window.webkitURL;
+            var imageURL = urlCreator.createObjectURL( blob );
+
+            $("#profilePicture").attr("src", imageURL);
+          });
+        });
+
+
+
+
+
+
+
+        socket.on('login_alert', function(){
+          alert("hi");
+          $(".content").html("<p id='login'><a align='center' onclick='redirect()'>Please Login</a></p>");
+        });
+      });
+
+      function redirect(){
+        window.location.pathname = '/loginScreen';
+      }
+
+      function goHome(){
+        window.location.pathname = "/";
+      }
+
+      function goPersonal(){
+        window.location.pathname = "/personal";
+      }
+
+      function goFriends(){
+        window.location.pathname = "/friends";
+      }
+    </script>
+  </body>
+</html>
